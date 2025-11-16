@@ -14,9 +14,10 @@ A React Native mobile application built with Expo for school staff to manage and
 
 - Node.js (v14 or higher)
 - npm or yarn
+- Expo Go app (SDK 54) on your device
 - Backend API running on `http://localhost:3001` (or configured API base URL)
 
-**Note**: No need to install global Expo CLI. The app uses the local Expo CLI bundled with the project.
+**Note**: This project uses Expo SDK 54. No need to install global Expo CLI. The app uses the local Expo CLI bundled with the project.
 
 ## Installation
 
