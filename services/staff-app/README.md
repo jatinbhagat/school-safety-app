@@ -125,6 +125,32 @@ If you see `Error: EMFILE: too many open files, watch`, this means the system fi
 - If running on a physical device, update the `apiBaseUrl` in `app.json` to use your computer's IP address instead of `localhost`
 - For Android emulator, you may need to use `10.0.2.2` instead of `localhost`
 
+### SDK version mismatch with Expo Go
+
+If you see "Project is incompatible with this version of Expo Go" or "The project you opened uses SDK 49" even after upgrading:
+
+**This is a caching issue.** Clear all caches and restart:
+
+```bash
+# Stop the dev server (Ctrl+C)
+cd services/staff-app
+
+# Clear all caches
+rm -rf .expo .expo-shared node_modules package-lock.json
+
+# Reinstall dependencies
+npm install
+
+# Start fresh
+npx expo start --clear
+```
+
+Then in your terminal, press `c` to clear the Metro bundler cache, or restart the Expo dev server.
+
+On your phone, you may also need to:
+- Close the Expo Go app completely
+- Reopen Expo Go and scan the QR code again
+
 ### Version mismatch errors
 
 If you see dependency version warnings:
