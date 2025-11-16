@@ -14,8 +14,9 @@ A React Native mobile application built with Expo for school staff to manage and
 
 - Node.js (v14 or higher)
 - npm or yarn
-- Expo CLI (`npm install -g expo-cli`)
 - Backend API running on `http://localhost:3001` (or configured API base URL)
+
+**Note**: No need to install global Expo CLI. The app uses the local Expo CLI bundled with the project.
 
 ## Installation
 
@@ -53,13 +54,13 @@ Start the Expo development server:
 npm start
 ```
 
-Or use the shorthand:
+Or use npx directly:
 
 ```bash
-expo start
+npx expo start
 ```
 
-This will open the Expo DevTools in your browser. From there, you can:
+This will start Metro bundler and display a QR code. From there, you can:
 
 - Press `a` to run on Android emulator
 - Press `i` to run on iOS simulator
@@ -100,11 +101,38 @@ staff-app/
 
 ## Troubleshooting
 
+### EMFILE: too many open files (macOS)
+
+If you see `Error: EMFILE: too many open files, watch`, this means the system file watcher limit is too low. Fix it by:
+
+1. Install watchman (recommended):
+   ```bash
+   brew install watchman
+   ```
+
+2. Or increase the file limit manually:
+   ```bash
+   # Add to ~/.bash_profile or ~/.zshrc
+   ulimit -n 10000
+   ```
+
+3. Restart your terminal and try again
+
 ### Cannot connect to backend
 
 - Ensure the backend server is running on `http://localhost:3001`
 - If running on a physical device, update the `apiBaseUrl` in `app.json` to use your computer's IP address instead of `localhost`
 - For Android emulator, you may need to use `10.0.2.2` instead of `localhost`
+
+### Version mismatch errors
+
+If you see dependency version warnings:
+
+```bash
+npx expo install --fix
+```
+
+This will automatically install the correct versions of all dependencies for your Expo SDK version.
 
 ### Dependencies issues
 
