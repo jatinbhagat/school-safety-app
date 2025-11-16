@@ -5,6 +5,7 @@ import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
 import { getIncidents } from './handlers/getIncidents';
 import { assignIncident } from './handlers/assignIncident';
+import { exportIncidents } from './handlers/exportIncidents';
 import { pool } from './db';
 
 dotenv.config({ path: '.env.local' });
@@ -53,6 +54,9 @@ app.post('/upload-url', getUploadUrl);
 // Staff app endpoints
 app.get('/incidents', getIncidents);
 app.post('/incidents/:id/assign', assignIncident);
+
+// Admin endpoints
+app.get('/admin/export', exportIncidents);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
