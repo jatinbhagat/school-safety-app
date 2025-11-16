@@ -7,6 +7,8 @@ import { getIncidents } from './handlers/getIncidents';
 import { assignIncident } from './handlers/assignIncident';
 import { exportIncidents } from './handlers/exportIncidents';
 import { pool } from './db';
+import { adminAuth } from './middleware/adminAuth';
+import { staffAuth } from './middleware/staffAuth';
 
 dotenv.config({ path: '.env.local' });
 
@@ -51,12 +53,12 @@ app.post('/report', postReport);
 // Upload URL generation endpoint
 app.post('/upload-url', getUploadUrl);
 
-// Staff app endpoints
-app.get('/incidents', getIncidents);
-app.post('/incidents/:id/assign', assignIncident);
+// Staff app endpoints (protected by staff token)
+app.get('/incidents', staffAuth, getIncidents);
+app.post('/incidents/:id/assign', staffAuth, assignIncident);
 
-// Admin endpoints
-app.get('/admin/export', exportIncidents);
+// Admin endpoints (protected by admin token)
+app.get('/admin/export', adminAuth, exportIncidents);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
