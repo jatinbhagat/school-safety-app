@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import { postReport } from './handlers/postReport';
+import { getUploadUrl } from './handlers/getUploadUrl';
 import { pool } from './db';
 
 dotenv.config({ path: '.env.local' });
@@ -43,6 +44,9 @@ app.get('/health', async (req: Request, res: Response) => {
 
 // Report submission endpoint
 app.post('/report', postReport);
+
+// Upload URL generation endpoint
+app.post('/upload-url', getUploadUrl);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
