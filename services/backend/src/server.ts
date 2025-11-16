@@ -3,6 +3,8 @@ import cors from 'cors';
 import * as dotenv from 'dotenv';
 import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
+import { getIncidents } from './handlers/getIncidents';
+import { assignIncident } from './handlers/assignIncident';
 import { pool } from './db';
 
 dotenv.config({ path: '.env.local' });
@@ -48,6 +50,10 @@ app.post('/report', postReport);
 // Upload URL generation endpoint
 app.post('/upload-url', getUploadUrl);
 
+// Staff app endpoints
+app.get('/incidents', getIncidents);
+app.post('/incidents/:id/assign', assignIncident);
+
 // 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -61,6 +67,8 @@ app.listen(PORT, () => {
   console.log(`🚀 School Safety Backend running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`📝 Report endpoint: http://localhost:${PORT}/report`);
+  console.log(`📋 Incidents list: http://localhost:${PORT}/incidents`);
+  console.log(`✅ Assign incident: POST http://localhost:${PORT}/incidents/:id/assign`);
 });
 
 // Graceful shutdown
