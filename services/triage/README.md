@@ -31,7 +31,7 @@ pip install -r requirements.txt
 Create a `.env` file in the `services/triage` directory:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/school_safety
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/school_safety
 OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
 

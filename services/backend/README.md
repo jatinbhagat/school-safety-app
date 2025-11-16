@@ -36,7 +36,7 @@ cp .env.example .env.local
 Edit `.env.local` with your database connection:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/school_safety
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/school_safety
 PORT=3001
 NODE_ENV=development
 ```
