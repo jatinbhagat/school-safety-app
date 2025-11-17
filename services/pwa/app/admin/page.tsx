@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   const [exporting, setExporting] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
 
   useEffect(() => {
     fetchIncidents();
@@ -28,7 +29,12 @@ export default function AdminDashboard() {
   const fetchIncidents = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/incidents`);
+      const headers: HeadersInit = {};
+      if (ADMIN_TOKEN) {
+        headers['X-ADMIN-TOKEN'] = ADMIN_TOKEN;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/admin/incidents`, { headers });
       if (!response.ok) {
         throw new Error('Failed to fetch incidents');
       }
@@ -44,7 +50,12 @@ export default function AdminDashboard() {
   const handleExportCSV = async () => {
     try {
       setExporting(true);
-      const response = await fetch(`${API_BASE_URL}/admin/export`);
+      const headers: HeadersInit = {};
+      if (ADMIN_TOKEN) {
+        headers['X-ADMIN-TOKEN'] = ADMIN_TOKEN;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/admin/export`, { headers });
       if (!response.ok) {
         throw new Error('Failed to export CSV');
       }

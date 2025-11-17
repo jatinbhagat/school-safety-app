@@ -65,6 +65,7 @@ app.get('/incidents', staffAuth, getIncidents);
 app.post('/incidents/:id/assign', staffAuth, assignIncident);
 
 // Admin endpoints (protected by admin token)
+app.get('/admin/incidents', adminAuth, getIncidents);
 app.get('/admin/export', adminAuth, exportIncidents);
 app.get('/admin/safety-score', adminAuth, getSafetyScore);
 
