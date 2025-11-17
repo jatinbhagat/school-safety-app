@@ -133,6 +133,18 @@ def compute_daily_aggregates(conn, start_date=None, end_date=None):
                 AND ABS(id1.incident_date - id2.incident_date) <= 7
             GROUP BY id1.id
         ),
+        status_counts AS (
+            SELECT
+                id.incident_date as date,
+                id.class_section,
+                id.category,
+                id.x_coord,
+                id.y_coord,
+                id.status,
+                COUNT(DISTINCT id.id) as status_count
+            FROM incident_data id
+            GROUP BY id.incident_date, id.class_section, id.category, id.x_coord, id.y_coord, id.status
+        ),
         aggregated AS (
             SELECT
                 id.incident_date as date,
@@ -143,10 +155,15 @@ def compute_daily_aggregates(conn, start_date=None, end_date=None):
                 COUNT(DISTINCT id.id) as incident_count,
                 COUNT(DISTINCT CASE WHEN rc.similar_incidents > 0 THEN id.id END) as recurrence_count,
                 AVG(id.urgency_score) as severity_avg,
-                jsonb_object_agg(
-                    id.status,
-                    COUNT(DISTINCT id.id)
-                ) FILTER (WHERE id.status IS NOT NULL) as status_breakdown
+                (SELECT jsonb_object_agg(sc.status, sc.status_count)
+                 FROM status_counts sc
+                 WHERE sc.date = id.incident_date
+                   AND COALESCE(sc.class_section, '') = COALESCE(id.class_section, '')
+                   AND sc.category = id.category
+                   AND COALESCE(sc.x_coord, 0) = COALESCE(id.x_coord, 0)
+                   AND COALESCE(sc.y_coord, 0) = COALESCE(id.y_coord, 0)
+                   AND sc.status IS NOT NULL
+                ) as status_breakdown
             FROM incident_data id
             LEFT JOIN recurrence_check rc ON id.id = rc.id
             GROUP BY id.incident_date, id.class_section, id.category, id.x_coord, id.y_coord
