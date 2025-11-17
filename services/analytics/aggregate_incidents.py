@@ -130,7 +130,7 @@ def compute_daily_aggregates(conn, start_date=None, end_date=None):
                 id1.class_section = id2.class_section
                 AND id1.category = id2.category
                 AND id1.id != id2.id
-                AND ABS(EXTRACT(EPOCH FROM (id1.incident_date - id2.incident_date)) / 86400) <= 7
+                AND ABS(id1.incident_date - id2.incident_date) <= 7
             GROUP BY id1.id
         ),
         aggregated AS (
@@ -228,7 +228,7 @@ def generate_incident_tags(conn):
         INNER JOIN incidents i2 ON i1.category = i2.category AND i1.id != i2.id
         INNER JOIN incident_locations il2 ON i2.id = il2.incident_id
         WHERE il1.class_section = il2.class_section
-            AND ABS(EXTRACT(EPOCH FROM (i1.created_at - i2.created_at)) / 86400) <= 7
+            AND ABS(DATE(i1.created_at) - DATE(i2.created_at)) <= 7
         ON CONFLICT (incident_id, tag) DO NOTHING
     """)
     recurring_count = cursor.rowcount
