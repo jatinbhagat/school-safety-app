@@ -10,6 +10,9 @@ import { getHeatmap } from './handlers/getHeatmap';
 import { getSafetyScore } from './handlers/getSafetyScore';
 import { triageRoute } from './handlers/triageRoute';
 import { triageRouteAssign } from './handlers/triageRouteAssign';
+import { generateMicroGuide } from './handlers/generateMicroGuide';
+import { getMicroGuides } from './handlers/getMicroGuides';
+import { updateMicroGuide } from './handlers/updateMicroGuide';
 import { pool } from './db';
 import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
@@ -71,6 +74,11 @@ app.get('/analytics/heatmap', staffAuth, getHeatmap);
 // Triage/routing endpoints (protected by staff token)
 app.post('/triage/route', staffAuth, triageRoute);
 app.post('/triage/route/assign', staffAuth, triageRouteAssign);
+
+// Micro-guides endpoints
+app.post('/micro-guides/generate', adminAuth, generateMicroGuide);
+app.get('/micro-guides', getMicroGuides);
+app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
