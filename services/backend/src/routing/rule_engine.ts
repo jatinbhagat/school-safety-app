@@ -5,6 +5,8 @@
  * for incident triage and assignment.
  */
 
+import { logAIOutput } from '../audit/log_ai_output';
+
 export interface RoutingRecommendation {
   role: string;
   confidence: number; // 0.0 to 1.0
@@ -293,6 +295,21 @@ export class MLClassifier {
     ];
 
     const topPrediction = mockPredictions[0];
+
+    // TODO: When implementing real AI/ML calls, add audit logging here:
+    // const startTime = Date.now();
+    // const prompt = `Route this incident: ${JSON.stringify(incident)}`;
+    // const response = await callAIModel(prompt);
+    // const latency = Date.now() - startTime;
+    //
+    // await logAIOutput({
+    //   incident_id: incident.id,
+    //   model: 'your-model-name',
+    //   prompt: prompt,
+    //   output_json: response,
+    //   token_count: response.usage?.total_tokens,
+    //   latency_ms: latency
+    // });
 
     return {
       role: topPrediction.role,

@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import json
+import hashlib
 import psycopg2
 import requests
 from dotenv import load_dotenv
@@ -52,7 +53,63 @@ def get_untriaged_incidents(conn):
     return incidents
 
 
-def analyze_incident_with_ai(incident_data):
+def hash_prompt(prompt):
+    """Generate SHA-256 hash of a prompt for audit logging."""
+    return hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+
+
+def log_ai_audit(conn, incident_id, model, prompt, output_json, token_count=None, latency_ms=None, error=None):
+    """
+    Log AI API call to ai_audit_logs table for audit trail.
+
+    Args:
+        conn: Database connection
+        incident_id: Incident ID
+        model: AI model name (e.g., 'gpt-3.5-turbo')
+        prompt: The prompt sent to the AI
+        output_json: The AI's response (dict)
+        token_count: Optional token usage
+        latency_ms: Optional response time in milliseconds
+        error: Optional error message
+    """
+    cursor = conn.cursor()
+    try:
+        prompt_hash = hash_prompt(prompt)
+        cursor.execute("""
+            INSERT INTO ai_audit_logs (
+                incident_id,
+                model,
+                prompt_hash,
+                output_json,
+                token_count,
+                latency_ms,
+                error
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            incident_id,
+            model,
+            prompt_hash,
+            json.dumps(output_json),
+            token_count,
+            latency_ms,
+            error
+        ))
+        log_id = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        print(f"  → AI audit log created: id={log_id}")
+        return log_id
+    except Exception as e:
+        print(f"  ⚠ Failed to write AI audit log: {e}")
+        conn.rollback()
+        cursor.close()
+        # Don't fail the main flow if audit logging fails
+        return None
+
+
+def analyze_incident_with_ai(conn, incident_data):
     """
     Call OpenAI API to analyze an incident.
     Returns JSON with: ai_category, urgency_score, risk_level, ai_summary
@@ -74,6 +131,12 @@ Return JSON:
   "ai_summary": "brief summary (max 50 words)"
 }}"""
 
+    model = 'gpt-3.5-turbo'
+    start_time = time.time()
+    ai_meta = None
+    error_msg = None
+    token_count = None
+
     try:
         response = requests.post(
             'https://api.openai.com/v1/chat/completions',
@@ -82,7 +145,7 @@ Return JSON:
                 'Content-Type': 'application/json'
             },
             json={
-                'model': 'gpt-3.5-turbo',
+                'model': model,
                 'messages': [
                     {
                         'role': 'system',
@@ -102,8 +165,15 @@ Return JSON:
         response.raise_for_status()
         result = response.json()
 
+        # Calculate latency
+        latency_ms = int((time.time() - start_time) * 1000)
+
         # Extract the AI response
         ai_response = result['choices'][0]['message']['content'].strip()
+
+        # Get token usage if available
+        if 'usage' in result:
+            token_count = result['usage'].get('total_tokens')
 
         # Parse JSON response
         ai_meta = json.loads(ai_response)
@@ -113,17 +183,44 @@ Return JSON:
         if not all(field in ai_meta for field in required_fields):
             raise ValueError(f"Missing required fields in AI response")
 
+        # Log successful AI call to audit table
+        log_ai_audit(
+            conn=conn,
+            incident_id=incident_id,
+            model=model,
+            prompt=prompt,
+            output_json=ai_meta,
+            token_count=token_count,
+            latency_ms=latency_ms
+        )
+
         return ai_meta
 
     except requests.exceptions.RequestException as e:
-        print(f"ERROR: API request failed for incident {incident_id}: {e}")
-        return None
+        error_msg = f"API request failed: {e}"
+        print(f"ERROR: {error_msg} for incident {incident_id}")
     except json.JSONDecodeError as e:
-        print(f"ERROR: Failed to parse AI response for incident {incident_id}: {e}")
-        return None
+        error_msg = f"Failed to parse AI response: {e}"
+        print(f"ERROR: {error_msg} for incident {incident_id}")
     except Exception as e:
-        print(f"ERROR: Unexpected error analyzing incident {incident_id}: {e}")
-        return None
+        error_msg = f"Unexpected error: {e}"
+        print(f"ERROR: {error_msg} analyzing incident {incident_id}")
+
+    # Log failed AI call to audit table
+    if error_msg:
+        latency_ms = int((time.time() - start_time) * 1000)
+        log_ai_audit(
+            conn=conn,
+            incident_id=incident_id,
+            model=model,
+            prompt=prompt,
+            output_json={},
+            token_count=token_count,
+            latency_ms=latency_ms,
+            error=error_msg
+        )
+
+    return None
 
 
 def update_incident_ai_meta(conn, incident_id, ai_meta):
@@ -171,7 +268,7 @@ def process_incidents(run_once=False):
                 incident_id = incident[0]
                 print(f"\nProcessing incident #{incident_id}...")
 
-                ai_meta = analyze_incident_with_ai(incident)
+                ai_meta = analyze_incident_with_ai(conn, incident)
 
                 if ai_meta:
                     if update_incident_ai_meta(conn, incident_id, ai_meta):
