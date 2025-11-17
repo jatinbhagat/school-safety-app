@@ -58,6 +58,8 @@ export async function calculateSafetyScore(
   const daysInMonth = endDate.getDate();
 
   // Query incidents for the month
+  // Note: incidents table doesn't have school_id (single-school deployment)
+  // The school_id parameter is stored in safety_scores for future extensibility
   const incidentsQuery = `
     SELECT
       COUNT(*) as total_incidents,
@@ -80,12 +82,9 @@ export async function calculateSafetyScore(
     FROM incidents
     WHERE created_at >= $1
       AND created_at <= $2
-      ${schoolId ? 'AND school_id = $3' : ''}
   `;
 
-  const params = schoolId
-    ? [startDate.toISOString(), endDate.toISOString(), schoolId]
-    : [startDate.toISOString(), endDate.toISOString()];
+  const params = [startDate.toISOString(), endDate.toISOString()];
 
   const result = await pool.query(incidentsQuery, params);
   const data = result.rows[0];
