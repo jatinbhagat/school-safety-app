@@ -78,7 +78,15 @@ export default function AdminDashboard() {
 
   const getRiskLevel = (incident: Incident): string => {
     if (incident.ai_meta) {
-      return incident.ai_meta.risk_level || incident.ai_meta.severity || 'N/A';
+      const riskLevel = incident.ai_meta.risk_level || incident.ai_meta.severity;
+      // Ensure we return a string, handling cases where API might return non-string values
+      if (riskLevel && typeof riskLevel === 'string') {
+        return riskLevel;
+      }
+      // Convert to string if it's a number or other type
+      if (riskLevel != null) {
+        return String(riskLevel);
+      }
     }
     return 'N/A';
   };
@@ -192,6 +200,11 @@ export default function AdminDashboard() {
 }
 
 const getRiskBadgeStyle = (riskLevel: string) => {
+  // Defensive check: ensure riskLevel is a valid string
+  if (!riskLevel || typeof riskLevel !== 'string') {
+    return { backgroundColor: '#e9ecef', color: '#495057' };
+  }
+
   const level = riskLevel.toLowerCase();
   if (level === 'high' || level === 'critical') {
     return { backgroundColor: '#fee', color: '#c00' };
