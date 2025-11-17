@@ -9,6 +9,19 @@ interface GenerateMicroGuideBody {
   duration_seconds?: number;
 }
 
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+  usage?: {
+    total_tokens: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+  };
+}
+
 /**
  * POST /micro-guides/generate
  * Generate a micro-guide using AI based on topic and tone
@@ -112,7 +125,7 @@ Return ONLY valid JSON in this format:
       return;
     }
 
-    const aiResponse = await response.json();
+    const aiResponse = await response.json() as OpenAIResponse;
     const aiContent = aiResponse.choices[0].message.content;
 
     // Parse AI response
