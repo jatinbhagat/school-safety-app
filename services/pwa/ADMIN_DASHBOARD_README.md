@@ -37,11 +37,14 @@ A Next.js-based admin dashboard for managing and exporting school safety inciden
    npm install
    ```
 
-3. (Optional) Configure the API URL:
+3. Configure environment variables:
    Create a `.env.local` file in `services/pwa/`:
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:3001
+   NEXT_PUBLIC_ADMIN_TOKEN=your-admin-token-here
    ```
+
+   **Important**: The `NEXT_PUBLIC_ADMIN_TOKEN` must match the `ADMIN_TOKEN` in the backend's `.env.local` file.
 
 ## Running the Application
 
@@ -110,8 +113,8 @@ http://localhost:3000/admin
 
 The admin dashboard uses these backend endpoints:
 
-- `GET /incidents` - Fetches all incidents for display
-- `GET /admin/export` - Downloads incidents as CSV
+- `GET /admin/incidents` - Fetches all incidents for display (requires X-ADMIN-TOKEN header)
+- `GET /admin/export` - Downloads incidents as CSV (requires X-ADMIN-TOKEN header)
 
 ### Sample Test Data
 
@@ -137,6 +140,8 @@ curl -X POST http://localhost:3001/report \
 
 **Solution**:
 - Ensure backend server is running on port 3001
+- Verify that both backend and PWA `.env.local` files are configured with matching admin tokens
+- Check that `NEXT_PUBLIC_ADMIN_TOKEN` in PWA matches `ADMIN_TOKEN` in backend
 - Check CORS settings in backend
 - Verify database connection
 
