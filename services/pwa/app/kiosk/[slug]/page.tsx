@@ -90,9 +90,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       timestamp: Date.now(),
     };
 
-    try {
-      const effectiveOnline = isOnline && !simulatedOffline;
+    const effectiveOnline = isOnline && !simulatedOffline;
 
+    try {
       if (effectiveOnline) {
         // Try to send directly
         const response = await fetch('http://localhost:3001/report', {
