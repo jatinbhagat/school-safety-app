@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { offlineQueue, Report } from '@/lib/offline';
+import { isDemoMode, simulateOfflineMode, isSimulatedOffline, getDemoImages } from '@/lib/demo';
+import DemoBanner from '@/components/DemoBanner';
 
 interface Category {
   id: string;
@@ -26,10 +28,16 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [simulatedOffline, setSimulatedOffline] = useState(false);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize offline queue
     offlineQueue.init();
+
+    // Check demo mode
+    setDemoMode(isDemoMode());
 
     // Monitor online/offline status
     const handleOnline = () => setIsOnline(true);
@@ -39,12 +47,26 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
     window.addEventListener('offline', handleOffline);
 
     setIsOnline(navigator.onLine);
+    setSimulatedOffline(isSimulatedOffline());
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const toggleSimulatedOffline = () => {
+    const newState = !simulatedOffline;
+    setSimulatedOffline(newState);
+    simulateOfflineMode(newState);
+    setIsOnline(!newState);
+  };
+
+  const attachSampleImage = () => {
+    const demoImages = getDemoImages();
+    const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
+    setAttachedImage(randomImage);
+  };
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -62,14 +84,16 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
     setIsSubmitting(true);
 
     const report: Report = {
-      schoolSlug: params.slug,
+      schoolSlug: demoMode ? 'demo-school' : params.slug,
       category: selectedCategory!,
       description: description.trim() || undefined,
       timestamp: Date.now(),
     };
 
+    const effectiveOnline = isOnline && !simulatedOffline;
+
     try {
-      if (isOnline) {
+      if (effectiveOnline) {
         // Try to send directly
         const response = await fetch('http://localhost:3001/report', {
           method: 'POST',
@@ -88,6 +112,15 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
         }
 
         console.log('Report submitted successfully');
+
+        // Demo mode: show toast
+        if (demoMode) {
+          setTimeout(() => {
+            alert(
+              '✅ AI triage suggestion sent!\n\nCheck the Admin Dashboard to see:\n• Incident details\n• AI routing suggestion\n• Assignment options'
+            );
+          }, 1000);
+        }
       } else {
         // Offline - enqueue for later
         await offlineQueue.enqueueReport(report);
@@ -95,6 +128,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       }
 
       setShowSuccess(true);
+      setAttachedImage(null); // Clear attachment
       setTimeout(() => {
         handleClose();
       }, 2000);
@@ -102,7 +136,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       console.error('Error submitting report:', error);
 
       // If online submission failed, queue it
-      if (isOnline) {
+      if (effectiveOnline) {
         console.log('Online submission failed, queuing for later');
         await offlineQueue.enqueueReport(report);
         setShowSuccess(true);
@@ -117,6 +151,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
   return (
     <div style={styles.container}>
+      {/* Demo Banner */}
+      {demoMode && <DemoBanner />}
+
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>School Safety Reporting</h1>
@@ -131,6 +168,38 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
           {isOnline ? 'Online' : 'Offline'}
         </div>
       </div>
+
+      {/* Demo Controls */}
+      {demoMode && (
+        <div style={styles.demoControls}>
+          <h3 style={styles.demoControlsTitle}>Demo Tools</h3>
+          <div style={styles.demoButtonGroup}>
+            <button
+              onClick={toggleSimulatedOffline}
+              style={{
+                ...styles.demoButton,
+                backgroundColor: simulatedOffline ? '#EF4444' : '#6B7280',
+              }}
+            >
+              {simulatedOffline ? '📡 Go Online' : '📴 Simulate Offline'}
+            </button>
+            <button onClick={attachSampleImage} style={styles.demoButton}>
+              📎 Attach Sample Image
+            </button>
+          </div>
+          {attachedImage && (
+            <div style={styles.attachmentPreview}>
+              <span>📷 Sample image attached</span>
+              <button
+                onClick={() => setAttachedImage(null)}
+                style={styles.removeAttachment}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category Grid */}
       <div style={styles.grid}>
@@ -157,10 +226,15 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
                 <div style={styles.checkmark}>✓</div>
                 <h2 style={styles.successTitle}>Report Submitted!</h2>
                 <p style={styles.successText}>
-                  {isOnline
+                  {isOnline && !simulatedOffline
                     ? 'Your report has been sent.'
                     : 'Your report will be sent when connection is restored.'}
                 </p>
+                {demoMode && (
+                  <p style={styles.demoNote}>
+                    💡 In demo mode - check Admin Dashboard to see this incident
+                  </p>
+                )}
               </div>
             ) : (
               <>
@@ -359,5 +433,61 @@ const styles = {
     fontSize: '1rem',
     color: '#6B7280',
     margin: 0,
+  } as React.CSSProperties,
+  demoControls: {
+    backgroundColor: '#FEF3C7',
+    border: '2px solid #F59E0B',
+    borderRadius: '0.75rem',
+    padding: '1.5rem',
+    marginBottom: '2rem',
+    maxWidth: '1200px',
+    margin: '0 auto 2rem auto',
+  } as React.CSSProperties,
+  demoControlsTitle: {
+    fontSize: '1.125rem',
+    fontWeight: 'bold',
+    color: '#92400E',
+    margin: '0 0 1rem 0',
+  } as React.CSSProperties,
+  demoButtonGroup: {
+    display: 'flex',
+    gap: '1rem',
+    flexWrap: 'wrap' as const,
+  } as React.CSSProperties,
+  demoButton: {
+    padding: '0.75rem 1.5rem',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: 'white',
+    backgroundColor: '#6B7280',
+    border: 'none',
+    borderRadius: '0.5rem',
+    cursor: 'pointer',
+    transition: 'opacity 0.2s',
+  } as React.CSSProperties,
+  attachmentPreview: {
+    marginTop: '1rem',
+    padding: '0.75rem 1rem',
+    backgroundColor: 'white',
+    borderRadius: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    fontSize: '0.875rem',
+    color: '#374151',
+  } as React.CSSProperties,
+  removeAttachment: {
+    background: 'transparent',
+    border: 'none',
+    color: '#6B7280',
+    fontSize: '1.25rem',
+    cursor: 'pointer',
+    padding: '0.25rem 0.5rem',
+  } as React.CSSProperties,
+  demoNote: {
+    fontSize: '0.875rem',
+    color: '#8B5CF6',
+    marginTop: '1rem',
+    fontWeight: '500',
   } as React.CSSProperties,
 };
