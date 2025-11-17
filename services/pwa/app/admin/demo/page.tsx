@@ -71,6 +71,12 @@ export default function AdminDemoPage() {
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [startTour, setStartTour] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Set mounted to true after component mounts on client
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Check if tour should auto-start
@@ -153,8 +159,8 @@ export default function AdminDemoPage() {
 
   return (
     <div style={styles.container}>
-      {/* Demo Tour */}
-      <DemoTour autoStart={startTour} onComplete={() => setStartTour(false)} />
+      {/* Demo Tour - Only render on client to avoid hydration errors */}
+      {mounted && <DemoTour autoStart={startTour} onComplete={() => setStartTour(false)} />}
 
       {/* Header */}
       <header style={styles.header}>
