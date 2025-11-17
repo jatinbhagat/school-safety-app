@@ -58,6 +58,7 @@ export async function calculateSafetyScore(
   const daysInMonth = endDate.getDate();
 
   // Query incidents for the month
+  // Supports both single-school (school_id = null) and multi-school deployments
   const incidentsQuery = `
     SELECT
       COUNT(*) as total_incidents,
