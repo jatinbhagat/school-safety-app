@@ -43,7 +43,7 @@ export function PriorityIndicator({ priority, size = 'md', showLabel = true }: P
         };
       default:
         return {
-          label: priority.toUpperCase(),
+          label: (priority as string).toUpperCase(),
           icon: '⚪',
           textColor: 'text-gray-600',
           bgColor: 'bg-gray-50',
