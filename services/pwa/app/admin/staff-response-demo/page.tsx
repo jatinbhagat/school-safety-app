@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DemoBanner } from '@/components/DemoBanner';
+import DemoBanner from '@/components/DemoBanner';
 import { StatsCard } from '@/components/staff-response/StatsCard';
 import { IncidentCard } from '@/components/staff-response/IncidentCard';
 import Link from 'next/link';
