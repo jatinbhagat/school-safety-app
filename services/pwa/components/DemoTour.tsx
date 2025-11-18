@@ -135,7 +135,7 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
   }, [autoStart]);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status, index, action } = data;
+    const { status, index } = data;
 
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
       // Tour completed or skipped
@@ -154,11 +154,6 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
       if (onComplete) {
         onComplete();
       }
-    }
-
-    // Update step index
-    if (action === 'next' || action === 'prev') {
-      setStepIndex(index + (action === 'next' ? 1 : -1));
     }
   };
 
