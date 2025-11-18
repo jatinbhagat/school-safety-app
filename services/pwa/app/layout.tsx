@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'School Safety Kiosk',
-  description: 'Anonymous safety reporting kiosk for schools',
+  title: 'SafelyNotify.com - Smart, Secure & Instant Safety for Every Institution',
+  description: 'Onboard your school, college, university or organization in minutes with complete control and total peace of mind. First 100 institutions get free access.',
 };
 
 export default function RootLayout({
