@@ -13,6 +13,11 @@ import { triageRouteAssign } from './handlers/triageRouteAssign';
 import { generateMicroGuide } from './handlers/generateMicroGuide';
 import { getMicroGuides } from './handlers/getMicroGuides';
 import { updateMicroGuide } from './handlers/updateMicroGuide';
+import { getIncidentDetail } from './handlers/getIncidentDetail';
+import { addStaffNote } from './handlers/addStaffNote';
+import { resolveIncident } from './handlers/resolveIncident';
+import { acceptIncident } from './handlers/acceptIncident';
+import { getStaffStats } from './handlers/getStaffStats';
 import { pool } from './db';
 import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
@@ -63,6 +68,13 @@ app.post('/upload-url', getUploadUrl);
 // Staff app endpoints (protected by staff token)
 app.get('/incidents', staffAuth, getIncidents);
 app.post('/incidents/:id/assign', staffAuth, assignIncident);
+
+// Staff incident management endpoints (protected by staff token)
+app.get('/staff/incidents/:id', staffAuth, getIncidentDetail);
+app.post('/staff/incidents/:id/accept', staffAuth, acceptIncident);
+app.post('/staff/incidents/:id/notes', staffAuth, addStaffNote);
+app.post('/staff/incidents/:id/resolve', staffAuth, resolveIncident);
+app.get('/staff/stats', staffAuth, getStaffStats);
 
 // Admin endpoints (protected by admin token)
 app.get('/admin/incidents', adminAuth, getIncidents);
