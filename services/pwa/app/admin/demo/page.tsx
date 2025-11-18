@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { enableDemoMode, resetDemoData } from '@/lib/demo';
 import DemoTour from '@/components/DemoTour';
@@ -73,7 +73,7 @@ const DEMO_TILES: DemoTile[] = [
   },
 ];
 
-export default function AdminDemoPage() {
+function AdminDemoPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isResetting, setIsResetting] = useState(false);
@@ -472,3 +472,11 @@ const styles = {
     cursor: 'pointer',
   } as React.CSSProperties,
 };
+
+export default function AdminDemoPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <AdminDemoPageContent />
+    </Suspense>
+  );
+}

@@ -202,39 +202,39 @@ export default function AdminDashboard() {
 const getRiskBadgeStyle = (riskLevel: string) => {
   // Defensive check: ensure riskLevel is a valid string
   if (!riskLevel || typeof riskLevel !== 'string') {
-    return { backgroundColor: '#e9ecef', color: '#495057' };
+    return { backgroundColor: '#f3f4f6', color: '#6b7280' };
   }
 
   const level = riskLevel.toLowerCase();
   if (level === 'high' || level === 'critical') {
-    return { backgroundColor: '#fee', color: '#c00' };
+    return { backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' };
   }
   if (level === 'medium' || level === 'moderate') {
-    return { backgroundColor: '#fef3cd', color: '#856404' };
+    return { backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a' };
   }
   if (level === 'low') {
-    return { backgroundColor: '#d4edda', color: '#155724' };
+    return { backgroundColor: '#d1fae5', color: '#059669', border: '1px solid #a7f3d0' };
   }
-  return { backgroundColor: '#e9ecef', color: '#495057' };
+  return { backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' };
 };
 
 const getStatusBadgeStyle = (status: string) => {
   const s = status.toLowerCase();
   if (s === 'pending') {
-    return { backgroundColor: '#fff3cd', color: '#856404' };
+    return { backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a' };
   }
   if (s === 'assigned') {
-    return { backgroundColor: '#cfe2ff', color: '#084298' };
+    return { backgroundColor: '#dbeafe', color: '#2563eb', border: '1px solid #bfdbfe' };
   }
   if (s === 'resolved') {
-    return { backgroundColor: '#d1e7dd', color: '#0f5132' };
+    return { backgroundColor: '#d1fae5', color: '#059669', border: '1px solid #a7f3d0' };
   }
-  return { backgroundColor: '#e9ecef', color: '#495057' };
+  return { backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' };
 };
 
 const styles = {
   container: {
-    padding: '2rem',
+    padding: '2.5rem 1.5rem',
     maxWidth: '1400px',
     margin: '0 auto',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -243,118 +243,137 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '2rem',
+    marginBottom: '2.5rem',
   } as React.CSSProperties,
   title: {
-    fontSize: '2rem',
-    fontWeight: 'bold',
+    fontSize: '2.5rem',
+    fontWeight: '700',
     margin: 0,
-    color: '#1a1a1a',
+    color: '#111827',
+    letterSpacing: '-0.025em',
   } as React.CSSProperties,
   exportButton: {
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#0070f3',
+    padding: '0.875rem 1.75rem',
+    backgroundColor: '#3b82f6',
     color: 'white',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '0.75rem',
     fontSize: '1rem',
-    fontWeight: '500',
+    fontWeight: '600',
     cursor: 'pointer',
-    transition: 'background-color 0.2s',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   } as React.CSSProperties,
   exportButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#d1d5db',
     cursor: 'not-allowed',
+    opacity: 0.6,
   } as React.CSSProperties,
   statsBar: {
     display: 'flex',
-    gap: '2rem',
-    marginBottom: '2rem',
-    padding: '1.5rem',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
+    gap: '1.25rem',
+    marginBottom: '2.5rem',
+    padding: '2rem',
+    backgroundColor: 'white',
+    borderRadius: '1.25rem',
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+    border: '1px solid #f3f4f6',
   } as React.CSSProperties,
   stat: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.5rem',
+    gap: '0.625rem',
+    flex: '1',
   } as React.CSSProperties,
   statLabel: {
-    fontSize: '0.875rem',
-    color: '#666',
-    fontWeight: '500',
+    fontSize: '0.9375rem',
+    color: '#6b7280',
+    fontWeight: '600',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.025em',
   } as React.CSSProperties,
   statValue: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: '2rem',
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: '-0.025em',
   } as React.CSSProperties,
   tableContainer: {
     overflowX: 'auto',
     backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    borderRadius: '1.25rem',
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+    border: '1px solid #f3f4f6',
   } as React.CSSProperties,
   table: {
     width: '100%',
-    borderCollapse: 'collapse',
+    borderCollapse: 'collapse' as const,
   } as React.CSSProperties,
   tableHeader: {
-    backgroundColor: '#f8f9fa',
-    borderBottom: '2px solid #dee2e6',
+    backgroundColor: '#f9fafb',
+    borderBottom: '2px solid #e5e7eb',
   } as React.CSSProperties,
   th: {
-    padding: '1rem',
-    textAlign: 'left',
-    fontWeight: '600',
-    color: '#495057',
-    fontSize: '0.875rem',
-    textTransform: 'uppercase',
+    padding: '1.125rem 1.25rem',
+    textAlign: 'left' as const,
+    fontWeight: '700',
+    color: '#374151',
+    fontSize: '0.8125rem',
+    textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   } as React.CSSProperties,
   tableRow: {
-    borderBottom: '1px solid #dee2e6',
-    transition: 'background-color 0.2s',
+    borderBottom: '1px solid #f3f4f6',
+    transition: 'background-color 0.15s ease',
   } as React.CSSProperties,
   td: {
-    padding: '1rem',
-    color: '#212529',
+    padding: '1.125rem 1.25rem',
+    color: '#111827',
+    fontSize: '0.9375rem',
   } as React.CSSProperties,
   badge: {
-    padding: '0.25rem 0.75rem',
-    borderRadius: '12px',
-    fontSize: '0.75rem',
+    padding: '0.375rem 0.875rem',
+    borderRadius: '0.5rem',
+    fontSize: '0.8125rem',
     fontWeight: '600',
-    textTransform: 'capitalize',
+    textTransform: 'capitalize' as const,
+    display: 'inline-block',
   } as React.CSSProperties,
   loading: {
-    textAlign: 'center',
-    padding: '3rem',
+    textAlign: 'center' as const,
+    padding: '4rem',
     fontSize: '1.125rem',
-    color: '#666',
+    color: '#6b7280',
+    fontWeight: '500',
   } as React.CSSProperties,
   error: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     padding: '2rem',
     fontSize: '1rem',
-    color: '#c00',
-    backgroundColor: '#fee',
-    borderRadius: '8px',
-    marginBottom: '1rem',
+    color: '#dc2626',
+    backgroundColor: '#fef2f2',
+    borderRadius: '1rem',
+    marginBottom: '1.5rem',
+    border: '1px solid #fecaca',
+    fontWeight: '500',
   } as React.CSSProperties,
   retryButton: {
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#0070f3',
+    padding: '0.875rem 1.75rem',
+    backgroundColor: '#3b82f6',
     color: 'white',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '0.75rem',
     fontSize: '1rem',
+    fontWeight: '600',
     cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   } as React.CSSProperties,
   emptyState: {
-    textAlign: 'center',
-    padding: '3rem',
-    fontSize: '1rem',
-    color: '#999',
+    textAlign: 'center' as const,
+    padding: '4rem',
+    fontSize: '1.0625rem',
+    color: '#9ca3af',
+    fontWeight: '500',
   } as React.CSSProperties,
 };
