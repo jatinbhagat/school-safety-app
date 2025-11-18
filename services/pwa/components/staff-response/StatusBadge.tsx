@@ -52,7 +52,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
         };
       default:
         return {
-          label: String(status).toUpperCase(),
+          label: status.toUpperCase(),
           bgColor: 'bg-gray-100',
           textColor: 'text-gray-800',
           icon: '⚪',

@@ -32,6 +32,14 @@ const DEMO_TILES: DemoTile[] = [
     color: '#8B5CF6',
   },
   {
+    id: 'staff-response',
+    title: 'Staff Incident Response',
+    description: 'How school staff manage and resolve student-reported incidents',
+    icon: '👮',
+    route: '/admin/staff-response-demo?demo=true',
+    color: '#10B981',
+  },
+  {
     id: 'heatmap',
     title: 'Heatmap & Trends',
     description: 'Visualize incident hotspots and identify patterns across locations',
@@ -45,7 +53,7 @@ const DEMO_TILES: DemoTile[] = [
     description: 'View comprehensive safety metrics and component breakdowns',
     icon: '📊',
     route: '/admin/safety-score-demo?demo=true',
-    color: '#10B981',
+    color: '#059669',
   },
   {
     id: 'micro-guides',

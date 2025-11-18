@@ -149,7 +149,7 @@ export function NotificationSimulator({
         )}
       </div>
 
-      <style>{`
+      <style jsx>{`
         @keyframes shrink {
           from {
             width: 100%;

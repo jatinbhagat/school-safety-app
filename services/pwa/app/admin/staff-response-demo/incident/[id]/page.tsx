@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import DemoBanner from '@/components/DemoBanner';
+import { DemoBanner } from '@/components/DemoBanner';
 import { StatusBadge } from '@/components/staff-response/StatusBadge';
 import { PriorityIndicator } from '@/components/staff-response/PriorityIndicator';
 import { IncidentTimeline } from '@/components/staff-response/IncidentTimeline';
