@@ -86,7 +86,13 @@ export default function AdminDemoPage() {
     }
   }, [searchParams]);
 
-  const handleTileClick = (route: string) => {
+  const handleTileClick = (tile: DemoTile) => {
+    // Special handling for Full Guided Tour - just start the tour instead of navigating
+    if (tile.id === 'full-tour') {
+      setStartTour(true);
+      return;
+    }
+
     // Enable demo mode if not already enabled
     if (typeof window !== 'undefined') {
       try {
@@ -96,7 +102,7 @@ export default function AdminDemoPage() {
       }
     }
 
-    router.push(route);
+    router.push(tile.route);
   };
 
   const handleReset = () => {
@@ -201,7 +207,7 @@ export default function AdminDemoPage() {
               ...styles.tile,
               borderLeft: `4px solid ${tile.color}`,
             }}
-            onClick={() => handleTileClick(tile.route)}
+            onClick={() => handleTileClick(tile)}
           >
             <div style={styles.tileIcon}>{tile.icon}</div>
             <h2 style={styles.tileTitle}>{tile.title}</h2>
