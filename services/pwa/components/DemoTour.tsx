@@ -135,10 +135,32 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
   }, [autoStart]);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status, index } = data;
+    const { action, index, status, type } = data;
 
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
-      // Tour completed or skipped
+    console.log('Joyride callback:', { action, index, status, type });
+
+    // Handle close button (X button)
+    if (action === 'close') {
+      setRun(false);
+      setStepIndex(0);
+      if (onComplete) {
+        onComplete();
+      }
+      return;
+    }
+
+    // Handle skip button
+    if (action === 'skip' || status === 'skipped') {
+      setRun(false);
+      setStepIndex(0);
+      if (onComplete) {
+        onComplete();
+      }
+      return;
+    }
+
+    // Handle tour completion
+    if (status === 'finished') {
       setRun(false);
       setStepIndex(0);
 
@@ -154,6 +176,14 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
       if (onComplete) {
         onComplete();
       }
+      return;
+    }
+
+    // Update step index for navigation
+    if (action === 'next') {
+      setStepIndex(index + 1);
+    } else if (action === 'prev') {
+      setStepIndex(index - 1);
     }
   };
 
