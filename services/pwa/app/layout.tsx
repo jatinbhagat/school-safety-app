@@ -1,3 +1,5 @@
+import './globals.css';
+
 export const metadata = {
   title: 'School Safety Kiosk',
   description: 'Anonymous safety reporting kiosk for schools',
@@ -10,7 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif' }}>
+      <body>
         {children}
       </body>
     </html>
