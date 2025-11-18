@@ -139,33 +139,13 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
 
     console.log('Joyride callback:', { action, index, status, type });
 
-    // Handle close button (X button)
-    if (action === 'close') {
-      setRun(false);
-      setStepIndex(0);
-      if (onComplete) {
-        onComplete();
-      }
-      return;
-    }
-
-    // Handle skip button
-    if (action === 'skip' || status === 'skipped') {
-      setRun(false);
-      setStepIndex(0);
-      if (onComplete) {
-        onComplete();
-      }
-      return;
-    }
-
-    // Handle tour completion
-    if (status === 'finished') {
+    // Handle tour completion and stopping first
+    if (status === 'finished' || status === 'skipped') {
       setRun(false);
       setStepIndex(0);
 
-      // Mark tour as completed in localStorage
-      if (typeof window !== 'undefined') {
+      // Mark tour as completed in localStorage only if finished
+      if (status === 'finished' && typeof window !== 'undefined') {
         try {
           localStorage.setItem('demo_tour_completed', 'true');
         } catch (error) {
@@ -179,11 +159,26 @@ export default function DemoTour({ autoStart = false, onComplete }: DemoTourProp
       return;
     }
 
-    // Update step index for navigation
-    if (action === 'next') {
-      setStepIndex(index + 1);
-    } else if (action === 'prev') {
-      setStepIndex(index - 1);
+    // Handle close action
+    if (action === 'close') {
+      setRun(false);
+      setStepIndex(0);
+      if (onComplete) {
+        onComplete();
+      }
+      return;
+    }
+
+    // Update step index only after a step transition has completed
+    // This prevents multiple updates during a single step transition
+    // The callback fires multiple times per step with different 'type' values,
+    // so we only update when type is 'step:after' to ensure one update per transition
+    if (type === 'step:after') {
+      if (action === 'next' && index < TOUR_STEPS.length - 1) {
+        setStepIndex(index + 1);
+      } else if (action === 'prev' && index > 0) {
+        setStepIndex(index - 1);
+      }
     }
   };
 
