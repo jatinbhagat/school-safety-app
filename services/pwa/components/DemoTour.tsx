@@ -64,6 +64,20 @@ const TOUR_STEPS: Step[] = [
     placement: 'right',
   },
   {
+    target: '[data-tour="staff-response-tile"]',
+    content: (
+      <div>
+        <h3>Staff Incident Response</h3>
+        <p>
+          See how school counselors, administrators, and staff receive, manage,
+          and resolve student-reported incidents. Watch the complete workflow
+          from assignment to resolution.
+        </p>
+      </div>
+    ),
+    placement: 'right',
+  },
+  {
     target: '[data-tour="heatmap-tile"]',
     content: (
       <div>
