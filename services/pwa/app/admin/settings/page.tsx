@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 
 export default function AdminSettingsPage() {
@@ -24,6 +24,8 @@ export default function AdminSettingsPage() {
   ]);
 
   const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateSetting = (field: string, value: any) => {
     setSettings(prev => ({ ...prev, [field]: value }));
@@ -43,6 +45,56 @@ export default function AdminSettingsPage() {
     // In a real implementation, this would save to backend
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'].includes(file.type)) {
+      alert('Please upload a PNG, JPG, or SVG file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      // TODO: Replace with actual API endpoint when backend is ready
+      // const response = await fetch(`/api/institutions/${institutionId}/logo`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      //   body: formData,
+      // });
+
+      // For now, create a local preview URL
+      const previewUrl = URL.createObjectURL(file);
+      updateSetting('logoUrl', previewUrl);
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      alert('Failed to upload logo. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const tabs = [
@@ -149,11 +201,22 @@ export default function AdminSettingsPage() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <button className="btn btn-secondary">
-                            Upload Logo
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={triggerFileInput}
+                            disabled={uploading}
+                            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {uploading ? 'Uploading...' : 'Upload Logo'}
                           </button>
                           <p className="mt-1 text-sm text-gray-500">
-                            Recommended: Square image, at least 200x200px, PNG or JPG
+                            Recommended: Square image, at least 200x200px, PNG or JPG (max 5MB)
                           </p>
                         </div>
                       </div>
