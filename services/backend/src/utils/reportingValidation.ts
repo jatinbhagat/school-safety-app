@@ -63,39 +63,55 @@ export interface ValidationResult {
  * Fetch field definitions from catalog
  */
 export async function getFieldDefinitions(): Promise<Map<string, FieldDefinition>> {
-  const result = await pool.query('SELECT * FROM reporting_fields_catalog');
-  const map = new Map<string, FieldDefinition>();
+  try {
+    const result = await pool.query('SELECT * FROM reporting_fields_catalog');
+    const map = new Map<string, FieldDefinition>();
 
-  for (const row of result.rows) {
-    map.set(row.name, {
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      options: row.options,
-      required_by_default: row.required_by_default,
-      pii_flag: row.pii_flag,
-      help_text: row.help_text,
-      placeholder: row.placeholder,
-    });
+    for (const row of result.rows) {
+      map.set(row.name, {
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        options: row.options,
+        required_by_default: row.required_by_default,
+        pii_flag: row.pii_flag,
+        help_text: row.help_text,
+        placeholder: row.placeholder,
+      });
+    }
+
+    return map;
+  } catch (error) {
+    console.error('Failed to fetch field definitions:', error);
+    if (error instanceof Error && error.message.includes('relation "reporting_fields_catalog" does not exist')) {
+      throw new Error('Database migration required: Run migration 018_reporting_config.sql to create reporting configuration tables');
+    }
+    throw error;
   }
-
-  return map;
 }
 
 /**
  * Fetch tenant reporting config
  */
 export async function getTenantConfig(tenantId: string): Promise<TenantConfig | null> {
-  const result = await pool.query(
-    'SELECT config FROM tenant_reporting_config WHERE tenant_id = $1',
-    [tenantId]
-  );
+  try {
+    const result = await pool.query(
+      'SELECT config FROM tenant_reporting_config WHERE tenant_id = $1',
+      [tenantId]
+    );
 
-  if (result.rows.length === 0) {
-    return null;
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return result.rows[0].config as TenantConfig;
+  } catch (error) {
+    console.error('Failed to fetch tenant config:', error);
+    if (error instanceof Error && error.message.includes('relation "tenant_reporting_config" does not exist')) {
+      throw new Error('Database migration required: Run migration 018_reporting_config.sql to create reporting configuration tables');
+    }
+    throw error;
   }
-
-  return result.rows[0].config as TenantConfig;
 }
 
 /**
@@ -404,12 +420,17 @@ export async function validateDynamicFields(
     return { valid: true, errors: [], sanitizedFields };
   } catch (error) {
     console.error('Validation error:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return {
       valid: false,
       errors: [
         {
           field: '_system',
-          message: 'Internal validation error',
+          message: error instanceof Error ? `Internal validation error: ${error.message}` : 'Internal validation error',
           code: 'SYSTEM_ERROR',
         },
       ],
