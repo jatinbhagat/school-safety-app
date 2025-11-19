@@ -50,9 +50,11 @@ export async function postReport(req: Request, res: Response): Promise<void> {
     }
 
     // Determine tenant ID (use demo tenant if in demo mode or no tenant provided)
-    let finalTenantId = tenant_id;
+    let finalTenantId: string;
     if (demo || !tenant_id) {
       finalTenantId = '00000000-0000-0000-0000-000000000001'; // Demo tenant
+    } else {
+      finalTenantId = tenant_id;
     }
 
     // Validate attachments if provided (legacy support)

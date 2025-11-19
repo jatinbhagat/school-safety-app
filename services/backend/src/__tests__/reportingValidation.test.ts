@@ -2,6 +2,10 @@
  * Unit Tests: Reporting Validation
  *
  * Tests dynamic field validation logic, PII controls, and security checks.
+ *
+ * NOTE: To run these tests, install Jest types:
+ *   npm install --save-dev jest @types/jest ts-jest
+ *   npm test
  */
 
 import { validateDynamicFields, checkHasPII } from '../utils/reportingValidation';
