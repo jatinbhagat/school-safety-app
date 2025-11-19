@@ -1,0 +1,215 @@
+{
+  "categories": [
+    {
+      "id": "ragging",
+      "name": "Ragging",
+      "description": "Report ragging or hazing incidents",
+      "order": 1,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "hostel_block",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": true,
+          "order": 6,
+          "pii": true,
+          "help_text": "Optional: Provide your email if you want to be contacted"
+        },
+        {
+          "field_key": "witness_present",
+          "required": false,
+          "enabled": true,
+          "order": 7
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 8
+        }
+      ]
+    },
+    {
+      "id": "harassment",
+      "name": "Harassment",
+      "description": "Report sexual or other harassment",
+      "order": 2,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": true,
+          "order": 6,
+          "pii": true
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 7
+        }
+      ]
+    },
+    {
+      "id": "academic_pressure",
+      "name": "Academic Pressure",
+      "description": "Report excessive academic pressure or stress",
+      "order": 3,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "cheating",
+      "name": "Academic Dishonesty",
+      "description": "Report cheating or plagiarism",
+      "order": 4,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "name": "General Concern",
+      "description": "Report other concerns or issues",
+      "order": 5,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "allow_anonymous": true,
+    "require_reporter_type": true,
+    "max_attachments": 5,
+    "pii_enabled_globally": false
+  }
+}

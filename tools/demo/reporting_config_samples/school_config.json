@@ -1,0 +1,221 @@
+{
+  "categories": [
+    {
+      "id": "bullying",
+      "name": "Bullying",
+      "description": "Report bullying incidents",
+      "order": 1,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "class_section",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "witness_present",
+          "required": false,
+          "enabled": true,
+          "order": 6
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 7
+        }
+      ]
+    },
+    {
+      "id": "harassment",
+      "name": "Harassment",
+      "description": "Report harassment or discrimination",
+      "order": 2,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": false,
+          "order": 5,
+          "pii": true
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 6
+        }
+      ]
+    },
+    {
+      "id": "cyberbullying",
+      "name": "Cyberbullying",
+      "description": "Report online harassment or bullying",
+      "order": 3,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        }
+      ]
+    },
+    {
+      "id": "physical",
+      "name": "Physical Incident",
+      "description": "Report physical altercations or injuries",
+      "order": 4,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": true,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": true,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "urgency_level",
+          "required": true,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "witness_present",
+          "required": false,
+          "enabled": true,
+          "order": 6
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 7
+        }
+      ]
+    },
+    {
+      "id": "mental_stress",
+      "name": "Mental Stress",
+      "description": "Report mental health concerns or stress",
+      "order": 5,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "contact_phone",
+          "required": false,
+          "enabled": false,
+          "order": 3,
+          "pii": true
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": false,
+          "order": 4,
+          "pii": true
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "allow_anonymous": true,
+    "require_reporter_type": true,
+    "max_attachments": 5,
+    "pii_enabled_globally": false
+  }
+}

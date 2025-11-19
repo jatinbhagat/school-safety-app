@@ -1,0 +1,134 @@
+# Azure DevOps Pipeline for School Safety App
+# This pipeline builds and deploys the PWA (Next.js) to Azure Static Web Apps
+# and the Backend to Azure App Service
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  nodeVersion: '22.x'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  # ============================================
+  # STAGE 1: BUILD PWA (Next.js)
+  # ============================================
+  - stage: BuildPWA
+    displayName: 'Build PWA'
+    jobs:
+      - job: BuildPWAJob
+        displayName: 'Build Next.js PWA'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Install Node.js'
+
+          - script: |
+              cd services/pwa
+              npm ci --legacy-peer-deps
+            displayName: 'Install PWA Dependencies'
+
+          - script: |
+              cd services/pwa
+              npm run build
+            displayName: 'Build PWA'
+            env:
+              NEXT_PUBLIC_API_URL: $(NEXT_PUBLIC_API_URL)
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: 'services/pwa/.next'
+              artifactName: 'pwa-build'
+            displayName: 'Publish PWA Artifacts'
+
+  # ============================================
+  # STAGE 2: BUILD BACKEND
+  # ============================================
+  - stage: BuildBackend
+    displayName: 'Build Backend'
+    jobs:
+      - job: BuildBackendJob
+        displayName: 'Build Node.js Backend'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Install Node.js'
+
+          - script: |
+              cd services/backend
+              npm ci
+            displayName: 'Install Backend Dependencies'
+
+          - script: |
+              cd services/backend
+              npm run build
+            displayName: 'Build Backend'
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: 'services/backend'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/backend.zip'
+            displayName: 'Archive Backend Files'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)/backend.zip'
+              artifactName: 'backend-build'
+            displayName: 'Publish Backend Artifacts'
+
+  # ============================================
+  # STAGE 3: DEPLOY PWA (Production)
+  # ============================================
+  - stage: DeployPWA
+    displayName: 'Deploy PWA'
+    dependsOn: BuildPWA
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployPWAJob
+        displayName: 'Deploy to Azure Static Web Apps'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureStaticWebApp@0
+                  inputs:
+                    app_location: 'services/pwa'
+                    api_location: ''
+                    output_location: '.next'
+                    azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
+                  displayName: 'Deploy PWA to Static Web Apps'
+
+  # ============================================
+  # STAGE 4: DEPLOY BACKEND (Production)
+  # ============================================
+  - stage: DeployBackend
+    displayName: 'Deploy Backend'
+    dependsOn: BuildBackend
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployBackendJob
+        displayName: 'Deploy to Azure App Service'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: '$(AZURE_SUBSCRIPTION)'
+                    appType: 'webAppLinux'
+                    appName: '$(BACKEND_APP_NAME)'
+                    package: '$(Pipeline.Workspace)/backend-build/backend.zip'
+                    runtimeStack: 'NODE|22-lts'
+                    startUpCommand: 'node dist/server.js'
+                  displayName: 'Deploy Backend to App Service'
