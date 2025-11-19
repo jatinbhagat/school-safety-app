@@ -22,6 +22,15 @@ import { pool } from './db';
 import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
 
+// New SafelyNotify.com imports
+import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
+import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
+import { verifyEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
+import { uploadLogoHandler } from './handlers/uploadLogo';
+import { generateQRCode, getQRCode } from './handlers/generateQR';
+import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins } from './handlers/institutions';
+import { submitDemoRequest, getDemoRequests } from './handlers/demo';
+
 dotenv.config({ path: '.env.local' });
 
 const app = express();
@@ -92,6 +101,40 @@ app.post('/triage/route/assign', staffAuth, triageRouteAssign);
 app.post('/micro-guides/generate', adminAuth, generateMicroGuide);
 app.get('/micro-guides', getMicroGuides);
 app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
+
+// ==========================================
+// SafelyNotify.com - New Marketing & Onboarding Endpoints
+// ==========================================
+
+// Onboarding endpoints (public)
+app.post('/api/onboarding/check-slug', checkSlug);
+app.post('/api/onboarding/start', startOnboarding);
+app.post('/api/onboarding/complete', completeOnboarding);
+
+// Authentication endpoints (public)
+app.post('/api/auth/verify-email', verifyEmail);
+app.post('/api/auth/login', login);
+app.post('/api/auth/forgot-password', forgotPassword);
+app.post('/api/auth/reset-password', resetPassword);
+app.get('/api/auth/me', jwtAuth, getCurrentUser);
+
+// Demo booking endpoints
+app.post('/api/demo/request', submitDemoRequest);
+app.get('/api/demo/requests', getDemoRequests); // TODO: Add admin auth
+
+// Institution endpoints
+app.get('/api/institutions/by-slug/:slug', getInstitutionBySlug); // Public for frontend routing
+app.get('/api/institutions/:id', jwtAuth, getInstitution);
+app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
+app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
+app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
+
+// File upload endpoints (authenticated)
+app.post('/api/institutions/:id/logo', jwtAuth, ...uploadLogoHandler);
+
+// QR code endpoints (authenticated)
+app.post('/api/institutions/:id/qr-code', jwtAuth, generateQRCode);
+app.get('/api/institutions/:id/qr-code', jwtAuth, getQRCode);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
