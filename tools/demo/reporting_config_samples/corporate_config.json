@@ -1,0 +1,216 @@
+{
+  "categories": [
+    {
+      "id": "harassment",
+      "name": "Workplace Harassment",
+      "description": "Report harassment or discrimination in the workplace",
+      "order": 1,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": true,
+          "order": 6,
+          "pii": true,
+          "help_text": "Optional: Provide contact if you wish to be reached"
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 7
+        }
+      ]
+    },
+    {
+      "id": "safety_concern",
+      "name": "Safety Concern",
+      "description": "Report workplace safety or health concerns",
+      "order": 2,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "location",
+          "required": true,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "urgency_level",
+          "required": true,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 6
+        }
+      ]
+    },
+    {
+      "id": "ethics_violation",
+      "name": "Ethics Violation",
+      "description": "Report ethical concerns or policy violations",
+      "order": 3,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "incident_date",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        }
+      ]
+    },
+    {
+      "id": "mental_health",
+      "name": "Mental Health Support",
+      "description": "Request support for mental health or well-being",
+      "order": 4,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "contact_email",
+          "required": false,
+          "enabled": true,
+          "order": 3,
+          "pii": true
+        },
+        {
+          "field_key": "contact_phone",
+          "required": false,
+          "enabled": true,
+          "order": 4,
+          "pii": true
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "name": "General Report",
+      "description": "Report other workplace concerns",
+      "order": 5,
+      "fields": [
+        {
+          "field_key": "reporter_type",
+          "required": true,
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "field_key": "description",
+          "required": true,
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "field_key": "department",
+          "required": false,
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "field_key": "location",
+          "required": false,
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "field_key": "attachments",
+          "required": false,
+          "enabled": true,
+          "order": 5
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "allow_anonymous": true,
+    "require_reporter_type": true,
+    "max_attachments": 10,
+    "pii_enabled_globally": false
+  }
+}
