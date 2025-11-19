@@ -5,3 +5,4 @@ MVP features:
 - 1-tap anonymous reporting (kiosk/PWA)
 - AI triage (low-cost)
 - Admin dashboard + escalation rules
+- Analytics & heatmap visualization
