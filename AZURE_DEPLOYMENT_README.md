@@ -134,7 +134,7 @@ Before you start, ensure you have:
 git checkout main
 git pull origin main
 
-# Ensure you have Node.js 20.x installed
+# Ensure you have Node.js 22.x installed
 node --version
 ```
 

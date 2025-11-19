@@ -132,7 +132,7 @@ Deploy your School Safety App to Azure in **3 easy options**:
    - Resource group: `school-safety-rg`
    - Name: `school-safety-backend` (must be globally unique)
    - Publish: `Code`
-   - Runtime stack: `Node 20 LTS`
+   - Runtime stack: `Node 22 LTS`
    - Operating System: `Linux`
    - Region: Same as resource group
    - Pricing plan:
@@ -244,7 +244,7 @@ If you're comfortable with terminal/command line:
 
 ### Prerequisites
 - Azure CLI installed ([Installation guide](https://docs.microsoft.com/cli/azure/install-azure-cli))
-- Node.js 20.x installed
+- Node.js 22.x installed
 - Git installed
 
 ### Quick Deploy Script
@@ -307,7 +307,7 @@ az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan school-safety-plan \
   --name $BACKEND_APP \
-  --runtime "NODE:20-lts"
+  --runtime "NODE:22-lts"
 
 # Set environment variables
 DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_NAME}.postgres.database.azure.com:5432/postgres?sslmode=require"
@@ -414,7 +414,7 @@ echo "Check Static Web App URL in Azure Portal"
 **Solution**:
 1. Check App Service → Log Stream for errors
 2. Verify environment variables are set correctly
-3. Check that Node.js version is 20.x
+3. Check that Node.js version is 22.x
 4. Test `/health` endpoint
 
 ### Problem: PWA build fails

@@ -9,7 +9,7 @@ trigger:
       - develop
 
 variables:
-  nodeVersion: '20.x'
+  nodeVersion: '22.x'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -129,6 +129,6 @@ stages:
                     appType: 'webAppLinux'
                     appName: '$(BACKEND_APP_NAME)'
                     package: '$(Pipeline.Workspace)/backend-build/backend.zip'
-                    runtimeStack: 'NODE|20-lts'
+                    runtimeStack: 'NODE|22-lts'
                     startUpCommand: 'node dist/server.js'
                   displayName: 'Deploy Backend to App Service'

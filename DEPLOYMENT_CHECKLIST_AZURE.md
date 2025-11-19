@@ -111,7 +111,7 @@ Access Key: ________________________________
 - [ ] Linux OS selected
 - [ ] App Service (Web App) created
 - [ ] App name is globally unique
-- [ ] Node.js 20 LTS runtime selected
+- [ ] Node.js 22 LTS runtime selected
 - [ ] Startup command configured: `node dist/server.js`
 - [ ] Environment variables configured:
   - [ ] DATABASE_URL

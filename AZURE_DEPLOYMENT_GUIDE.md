@@ -75,8 +75,8 @@ This guide provides comprehensive instructions for deploying the School Safety A
 ### Required Tools
 
 ```bash
-# Node.js 20.x
-node --version  # Should be v20.x
+# Node.js 22.x
+node --version  # Should be v22.x
 
 # Azure CLI
 az --version    # Should be 2.50+
@@ -312,7 +312,7 @@ az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan $APP_SERVICE_PLAN \
   --name $BACKEND_APP_NAME \
-  --runtime "NODE:20-lts" \
+  --runtime "NODE:22-lts" \
   --tags $TAGS
 
 # Configure startup command
