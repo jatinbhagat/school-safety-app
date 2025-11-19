@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
-import { generateVerificationToken } from '../utils/jwt';
+import { generateToken, generateVerificationToken } from '../utils/jwt';
 import { sendVerificationEmail } from '../utils/email';
+import { validatePassword, hashPassword } from '../utils/password';
 
 /**
  * POST /api/onboarding/check-slug
@@ -146,6 +147,14 @@ export async function completeOnboarding(req: Request, res: Response) {
       });
     }
 
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        error: passwordValidation.message,
+      });
+    }
+
     // Validate URL slug availability
     const slugCheck = await pool.query(
       'SELECT id FROM institutions WHERE url_slug = $1 AND id != $2',
@@ -208,40 +217,39 @@ export async function completeOnboarding(req: Request, res: Response) {
       }
     }
 
-    // Create primary admin account with verification token
-    const verificationToken = generateVerificationToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Hash password
+    const passwordHash = await hashPassword(password);
 
+    // Create primary admin account with password (skip email verification)
     const adminResult = await pool.query(
       `INSERT INTO institution_admins (
         institution_id, name, email, role,
-        verification_token, verification_token_expires_at
+        password_hash, email_verified
       ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, email`,
+      RETURNING id, email, name, role`,
       [
         institutionId,
         institution.contact_name,
         institution.email,
         'super_admin', // First admin is always super_admin
-        verificationToken,
-        expiresAt,
+        passwordHash,
+        true, // Skip email verification
       ]
     );
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(
-        institution.email,
-        verificationToken,
-        institution.institution_name
-      );
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Continue even if email fails
-    }
+    const admin = adminResult.rows[0];
+
+    // Generate JWT token for auto-login
+    const jwtToken = generateToken({
+      adminId: admin.id,
+      institutionId: institutionId,
+      email: admin.email,
+      role: admin.role,
+    });
 
     res.json({
       success: true,
+      accessToken: jwtToken,
       institution: {
         id: institutionId,
         name: institution.institution_name,
@@ -249,11 +257,12 @@ export async function completeOnboarding(req: Request, res: Response) {
         kioskUrl: `/kiosk/${urlSlug}`,
       },
       admin: {
-        id: adminResult.rows[0].id,
-        email: adminResult.rows[0].email,
-        verificationSent: true,
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
       },
-      message: 'Onboarding complete! Please check your email to verify your account.',
+      message: 'Onboarding complete! Redirecting to your dashboard...',
     });
   } catch (error) {
     console.error('Complete onboarding error:', error);
