@@ -3,17 +3,24 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import PasswordInput from '@/components/PasswordInput';
+import StepIndicator from '@/components/StepIndicator';
+import { COUNTRIES, getStatesForCountry, countryRequiresState } from '@/lib/countries';
 
 type InstitutionType = 'school' | 'college' | 'university' | 'corporate' | 'ngo' | '';
 
 interface OnboardingData {
   institutionType: InstitutionType;
   institutionName: string;
-  location: string;
+  country: string;
+  state: string;
+  city: string;
+  location: string; // Legacy field
   email: string;
   contactName: string;
   phone: string;
   password: string;
+  confirmPassword: string;
   urlSlug: string;
   features: {
     alerts: boolean;
@@ -31,11 +38,15 @@ export default function OnboardingPage() {
   const [data, setData] = useState<OnboardingData>({
     institutionType: '',
     institutionName: '',
-    location: '',
+    country: '',
+    state: '',
+    city: '',
+    location: '', // Legacy
     email: '',
     contactName: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     urlSlug: '',
     features: {
       alerts: true,
@@ -108,8 +119,14 @@ export default function OnboardingPage() {
     if (!data.institutionName || data.institutionName.trim().length < 2) {
       validationErrors.push('Institution name must be at least 2 characters');
     }
-    if (!data.location || data.location.trim().length < 2) {
-      validationErrors.push('Location must be at least 2 characters');
+    if (!data.country) {
+      validationErrors.push('Country is required');
+    }
+    if (countryRequiresState(data.country) && !data.state) {
+      validationErrors.push('State/Province is required for this country');
+    }
+    if (!data.city || data.city.trim().length < 2) {
+      validationErrors.push('City must be at least 2 characters');
     }
     if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       validationErrors.push('Valid email address is required');
@@ -122,6 +139,9 @@ export default function OnboardingPage() {
     }
     if (!data.password || data.password.length < 8) {
       validationErrors.push('Password must be at least 8 characters');
+    }
+    if (data.password !== data.confirmPassword) {
+      validationErrors.push('Passwords do not match');
     }
     if (!data.acceptedTerms) {
       validationErrors.push('You must accept the terms and conditions');
@@ -144,7 +164,9 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           institutionType: data.institutionType,
           institutionName: data.institutionName,
-          location: data.location,
+          country: data.country,
+          state: data.state || null,
+          city: data.city,
           email: data.email,
           contactName: data.contactName,
           phone: data.phone,
@@ -499,18 +521,64 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Location (City, State/Country) *
-                  </label>
-                  <input
-                    type="text"
-                    value={data.location}
-                    onChange={(e) => updateData('location', e.target.value)}
-                    className="input"
-                    placeholder="e.g., Boston, MA"
-                    required
-                  />
+                {/* Location Fields */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Country *
+                    </label>
+                    <select
+                      value={data.country}
+                      onChange={(e) => {
+                        updateData('country', e.target.value);
+                        updateData('state', ''); // Reset state when country changes
+                      }}
+                      className="input"
+                      required
+                    >
+                      <option value="">Select Country</option>
+                      {COUNTRIES.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {data.country && countryRequiresState(data.country) && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {data.country === 'CA' ? 'Province' : data.country === 'GB' ? 'Region' : 'State'} *
+                      </label>
+                      <select
+                        value={data.state}
+                        onChange={(e) => updateData('state', e.target.value)}
+                        className="input"
+                        required
+                      >
+                        <option value="">Select {data.country === 'CA' ? 'Province' : data.country === 'GB' ? 'Region' : 'State'}</option>
+                        {getStatesForCountry(data.country).map((state) => (
+                          <option key={state.code} value={state.code}>
+                            {state.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={data.city}
+                      onChange={(e) => updateData('city', e.target.value)}
+                      className="input"
+                      placeholder="e.g., Boston"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -557,20 +625,32 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    value={data.password || ''}
-                    onChange={(e) => updateData('password', e.target.value)}
-                    className="input"
-                    placeholder="Create a secure password"
+                <div className="grid md:grid-cols-2 gap-6">
+                  <PasswordInput
+                    value={data.password}
+                    onChange={(value) => updateData('password', value)}
+                    label="Create Password"
+                    placeholder="Min 8 characters"
                     required
+                    showStrength
+                    autoComplete="new-password"
                   />
-                  <p className="mt-1 text-sm text-gray-500">At least 8 characters</p>
+
+                  <PasswordInput
+                    value={data.confirmPassword}
+                    onChange={(value) => updateData('confirmPassword', value)}
+                    label="Confirm Password"
+                    placeholder="Re-enter password"
+                    required
+                    autoComplete="new-password"
+                  />
                 </div>
+
+                {data.password && data.confirmPassword && (
+                  <p className={`text-sm ${data.password === data.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    {data.password === data.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                  </p>
+                )}
               </div>
             </div>
 
