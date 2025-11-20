@@ -548,7 +548,12 @@ export default function OnboardingPage() {
                   {data.country && countryRequiresState(data.country) && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {data.country === 'CA' ? 'Province' : data.country === 'GB' ? 'Region' : 'State'} *
+                        {data.country === 'CA' ? 'Province'
+                          : data.country === 'GB' ? 'Region'
+                          : data.country === 'IN' ? 'State/UT'
+                          : data.country === 'AE' ? 'Emirate'
+                          : data.country === 'ID' ? 'Province'
+                          : 'State'} *
                       </label>
                       <select
                         value={data.state}
@@ -556,7 +561,12 @@ export default function OnboardingPage() {
                         className="input"
                         required
                       >
-                        <option value="">Select {data.country === 'CA' ? 'Province' : data.country === 'GB' ? 'Region' : 'State'}</option>
+                        <option value="">Select {data.country === 'CA' ? 'Province'
+                          : data.country === 'GB' ? 'Region'
+                          : data.country === 'IN' ? 'State/UT'
+                          : data.country === 'AE' ? 'Emirate'
+                          : data.country === 'ID' ? 'Province'
+                          : 'State'}</option>
                         {getStatesForCountry(data.country).map((state) => (
                           <option key={state.code} value={state.code}>
                             {state.name}
@@ -800,7 +810,7 @@ export default function OnboardingPage() {
               </button>
               <button
                 onClick={handleCompleteOnboarding}
-                disabled={loading || !data.institutionName || !data.location || !data.email || !data.phone || !data.contactName || !data.password || !data.acceptedTerms}
+                disabled={loading || !data.institutionName || !data.country || !data.city || !data.email || !data.phone || !data.contactName || !data.password || !data.confirmPassword || !data.acceptedTerms}
                 className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
                 {loading && (

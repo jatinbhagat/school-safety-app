@@ -15,6 +15,10 @@ export const COUNTRIES: Country[] = [
   { code: 'AU', name: 'Australia' },
   { code: 'NZ', name: 'New Zealand' },
   { code: 'IE', name: 'Ireland' },
+  { code: 'IN', name: 'India' },
+  { code: 'AE', name: 'United Arab Emirates' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'ID', name: 'Indonesia' },
 ];
 
 export const US_STATES: State[] = [
@@ -105,6 +109,92 @@ export const GB_REGIONS: State[] = [
   { code: 'NIR', name: 'Northern Ireland' },
 ];
 
+export const IN_STATES: State[] = [
+  { code: 'AN', name: 'Andaman and Nicobar Islands' },
+  { code: 'AP', name: 'Andhra Pradesh' },
+  { code: 'AR', name: 'Arunachal Pradesh' },
+  { code: 'AS', name: 'Assam' },
+  { code: 'BR', name: 'Bihar' },
+  { code: 'CH', name: 'Chandigarh' },
+  { code: 'CT', name: 'Chhattisgarh' },
+  { code: 'DH', name: 'Dadra and Nagar Haveli and Daman and Diu' },
+  { code: 'DL', name: 'Delhi' },
+  { code: 'GA', name: 'Goa' },
+  { code: 'GJ', name: 'Gujarat' },
+  { code: 'HR', name: 'Haryana' },
+  { code: 'HP', name: 'Himachal Pradesh' },
+  { code: 'JK', name: 'Jammu and Kashmir' },
+  { code: 'JH', name: 'Jharkhand' },
+  { code: 'KA', name: 'Karnataka' },
+  { code: 'KL', name: 'Kerala' },
+  { code: 'LA', name: 'Ladakh' },
+  { code: 'LD', name: 'Lakshadweep' },
+  { code: 'MP', name: 'Madhya Pradesh' },
+  { code: 'MH', name: 'Maharashtra' },
+  { code: 'MN', name: 'Manipur' },
+  { code: 'ML', name: 'Meghalaya' },
+  { code: 'MZ', name: 'Mizoram' },
+  { code: 'NL', name: 'Nagaland' },
+  { code: 'OR', name: 'Odisha' },
+  { code: 'PY', name: 'Puducherry' },
+  { code: 'PB', name: 'Punjab' },
+  { code: 'RJ', name: 'Rajasthan' },
+  { code: 'SK', name: 'Sikkim' },
+  { code: 'TN', name: 'Tamil Nadu' },
+  { code: 'TS', name: 'Telangana' },
+  { code: 'TR', name: 'Tripura' },
+  { code: 'UP', name: 'Uttar Pradesh' },
+  { code: 'UK', name: 'Uttarakhand' },
+  { code: 'WB', name: 'West Bengal' },
+];
+
+export const AE_EMIRATES: State[] = [
+  { code: 'AZ', name: 'Abu Dhabi' },
+  { code: 'AJ', name: 'Ajman' },
+  { code: 'DU', name: 'Dubai' },
+  { code: 'FU', name: 'Fujairah' },
+  { code: 'RK', name: 'Ras Al Khaimah' },
+  { code: 'SH', name: 'Sharjah' },
+  { code: 'UQ', name: 'Umm Al Quwain' },
+];
+
+export const ID_PROVINCES: State[] = [
+  { code: 'AC', name: 'Aceh' },
+  { code: 'BA', name: 'Bali' },
+  { code: 'BB', name: 'Bangka Belitung Islands' },
+  { code: 'BT', name: 'Banten' },
+  { code: 'BE', name: 'Bengkulu' },
+  { code: 'JT', name: 'Central Java' },
+  { code: 'KT', name: 'Central Kalimantan' },
+  { code: 'ST', name: 'Central Sulawesi' },
+  { code: 'GO', name: 'Gorontalo' },
+  { code: 'JK', name: 'Jakarta' },
+  { code: 'JA', name: 'Jambi' },
+  { code: 'JI', name: 'East Java' },
+  { code: 'KI', name: 'East Kalimantan' },
+  { code: 'NT', name: 'East Nusa Tenggara' },
+  { code: 'LA', name: 'Lampung' },
+  { code: 'MA', name: 'Maluku' },
+  { code: 'KU', name: 'North Kalimantan' },
+  { code: 'MU', name: 'North Maluku' },
+  { code: 'SA', name: 'North Sulawesi' },
+  { code: 'SB', name: 'North Sumatra' },
+  { code: 'PA', name: 'Papua' },
+  { code: 'RI', name: 'Riau' },
+  { code: 'KR', name: 'Riau Islands' },
+  { code: 'SG', name: 'Southeast Sulawesi' },
+  { code: 'KS', name: 'South Kalimantan' },
+  { code: 'SN', name: 'South Sulawesi' },
+  { code: 'SS', name: 'South Sumatra' },
+  { code: 'JB', name: 'West Java' },
+  { code: 'KB', name: 'West Kalimantan' },
+  { code: 'NB', name: 'West Nusa Tenggara' },
+  { code: 'PB', name: 'West Papua' },
+  { code: 'SR', name: 'West Sulawesi' },
+  { code: 'SU', name: 'West Sumatra' },
+  { code: 'YO', name: 'Yogyakarta' },
+];
+
 export function getStatesForCountry(countryCode: string): State[] {
   switch (countryCode) {
     case 'US':
@@ -115,13 +205,19 @@ export function getStatesForCountry(countryCode: string): State[] {
       return AU_STATES;
     case 'GB':
       return GB_REGIONS;
+    case 'IN':
+      return IN_STATES;
+    case 'AE':
+      return AE_EMIRATES;
+    case 'ID':
+      return ID_PROVINCES;
     default:
       return [];
   }
 }
 
 export function countryRequiresState(countryCode: string): boolean {
-  return ['US', 'CA', 'AU', 'GB'].includes(countryCode);
+  return ['US', 'CA', 'AU', 'GB', 'IN', 'AE', 'ID'].includes(countryCode);
 }
 
 export function validateCountryCode(code: string): boolean {

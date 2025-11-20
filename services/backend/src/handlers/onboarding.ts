@@ -153,11 +153,14 @@ export async function startOnboarding(req: Request, res: Response) {
     console.log(`[Onboarding] Starting onboarding for: ${institutionName} (${email})`);
 
     // Country/state validation data
-    const VALID_COUNTRIES = ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'];
+    const VALID_COUNTRIES = ['US', 'CA', 'GB', 'AU', 'NZ', 'IE', 'IN', 'AE', 'SG', 'ID'];
     const US_STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
     const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
     const AU_STATES = ['NSW', 'QLD', 'SA', 'TAS', 'VIC', 'WA', 'ACT', 'NT'];
     const GB_REGIONS = ['ENG', 'SCT', 'WLS', 'NIR'];
+    const IN_STATES = ['AN', 'AP', 'AR', 'AS', 'BR', 'CH', 'CT', 'DH', 'DL', 'GA', 'GJ', 'HR', 'HP', 'JK', 'JH', 'KA', 'KL', 'LA', 'LD', 'MP', 'MH', 'MN', 'ML', 'MZ', 'NL', 'OR', 'PY', 'PB', 'RJ', 'SK', 'TN', 'TS', 'TR', 'UP', 'UK', 'WB'];
+    const AE_EMIRATES = ['AZ', 'AJ', 'DU', 'FU', 'RK', 'SH', 'UQ'];
+    const ID_PROVINCES = ['AC', 'BA', 'BB', 'BT', 'BE', 'JT', 'KT', 'ST', 'GO', 'JK', 'JA', 'JI', 'KI', 'NT', 'LA', 'MA', 'KU', 'MU', 'SA', 'SB', 'PA', 'RI', 'KR', 'SG', 'KS', 'SN', 'SS', 'JB', 'KB', 'NB', 'PB', 'SR', 'SU', 'YO'];
 
     // Comprehensive validation
     const validationErrors: { field: string; message: string }[] = [];
@@ -186,8 +189,8 @@ export async function startOnboarding(req: Request, res: Response) {
       validationErrors.push({ field: 'country', message: 'Invalid country code' });
     }
 
-    // Validate state (required for US, CA, AU, GB)
-    if (country && ['US', 'CA', 'AU', 'GB'].includes(country)) {
+    // Validate state (required for US, CA, AU, GB, IN, AE, ID)
+    if (country && ['US', 'CA', 'AU', 'GB', 'IN', 'AE', 'ID'].includes(country)) {
       if (!state || typeof state !== 'string') {
         validationErrors.push({ field: 'state', message: 'State/Province is required for this country' });
       } else {
@@ -203,6 +206,15 @@ export async function startOnboarding(req: Request, res: Response) {
         }
         if (country === 'GB' && !GB_REGIONS.includes(state)) {
           validationErrors.push({ field: 'state', message: 'Invalid UK region code' });
+        }
+        if (country === 'IN' && !IN_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Indian state code' });
+        }
+        if (country === 'AE' && !AE_EMIRATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid UAE emirate code' });
+        }
+        if (country === 'ID' && !ID_PROVINCES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Indonesian province code' });
         }
       }
     }
