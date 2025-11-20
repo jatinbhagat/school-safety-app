@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AdminNavbar from '@/components/AdminNavbar';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Admin {
   id: number;
@@ -34,6 +36,8 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [institutionId, setInstitutionId] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
 
   const [settings, setSettings] = useState({
     institutionName: '',
@@ -93,6 +97,8 @@ export default function AdminSettingsPage() {
       const userData = await meResponse.json();
       const instId = userData.institutionId;
       setInstitutionId(instId);
+      setUserName(userData.name || '');
+      setUserRole(userData.role || '');
 
       // Fetch institution details
       const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${instId}`, {
@@ -334,22 +340,12 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-blue-600">SafelyNotify.com</Link>
-            <div className="flex items-center gap-4">
-              <Link href="/admin" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Dashboard
-              </Link>
-              <Link href="/" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <AdminNavbar
+        institutionName={settings.institutionName}
+        userRole={userRole}
+        userName={userName}
+      />
+      <Breadcrumbs />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}

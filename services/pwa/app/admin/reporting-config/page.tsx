@@ -14,6 +14,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import AdminNavbar from '@/components/AdminNavbar';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface FieldDefinition {
   id?: string;
@@ -55,6 +58,7 @@ interface TenantConfig {
 }
 
 export default function ReportingConfigEditor() {
+  const router = useRouter();
   const [config, setConfig] = useState<TenantConfig | null>(null);
   const [catalog, setCatalog] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +68,46 @@ export default function ReportingConfigEditor() {
   const [showPIIWarning, setShowPIIWarning] = useState(false);
   const [piiFieldToEnable, setPIIFieldToEnable] = useState<{ categoryId: string; fieldKey: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
+  const [institutionName, setInstitutionName] = useState<string>('');
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
+    fetchUserInfo();
     loadConfig();
     loadCatalog();
   }, [tenantId]);
+
+  const fetchUserInfo = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (meResponse.ok) {
+        const userData = await meResponse.json();
+        setUserName(userData.name || '');
+        setUserRole(userData.role || '');
+
+        // Get institution details
+        const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${userData.institutionId}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (instResponse.ok) {
+          const instData = await instResponse.json();
+          setInstitutionName(instData.institution_name || '');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch user info:', err);
+    }
+  };
 
   const loadConfig = async () => {
     try {
@@ -296,8 +335,16 @@ export default function ReportingConfigEditor() {
   const activeConfig = config.categories.find((c) => c.id === activeCategory);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar
+        institutionName={institutionName}
+        userRole={userRole}
+        userName={userName}
+      />
+      <Breadcrumbs />
+
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Reporting Configuration Editor</h1>
@@ -591,6 +638,8 @@ export default function ReportingConfigEditor() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

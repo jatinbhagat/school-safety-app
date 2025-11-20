@@ -141,13 +141,23 @@ export async function startOnboarding(req: Request, res: Response) {
     const {
       institutionType,
       institutionName,
-      location,
+      country,
+      state,
+      city,
+      location, // Legacy field (for backward compatibility)
       email,
       contactName,
       phone,
     } = req.body;
 
     console.log(`[Onboarding] Starting onboarding for: ${institutionName} (${email})`);
+
+    // Country/state validation data
+    const VALID_COUNTRIES = ['US', 'CA', 'GB', 'AU', 'NZ', 'IE'];
+    const US_STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
+    const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+    const AU_STATES = ['NSW', 'QLD', 'SA', 'TAS', 'VIC', 'WA', 'ACT', 'NT'];
+    const GB_REGIONS = ['ENG', 'SCT', 'WLS', 'NIR'];
 
     // Comprehensive validation
     const validationErrors: { field: string; message: string }[] = [];
@@ -169,10 +179,39 @@ export async function startOnboarding(req: Request, res: Response) {
       validationErrors.push({ field: 'institutionName', message: 'Institution name must be 200 characters or less' });
     }
 
-    if (!location || typeof location !== 'string') {
-      validationErrors.push({ field: 'location', message: 'Location is required' });
-    } else if (location.trim().length < 2) {
-      validationErrors.push({ field: 'location', message: 'Location must be at least 2 characters' });
+    // Validate country
+    if (!country || typeof country !== 'string') {
+      validationErrors.push({ field: 'country', message: 'Country is required' });
+    } else if (!VALID_COUNTRIES.includes(country)) {
+      validationErrors.push({ field: 'country', message: 'Invalid country code' });
+    }
+
+    // Validate state (required for US, CA, AU, GB)
+    if (country && ['US', 'CA', 'AU', 'GB'].includes(country)) {
+      if (!state || typeof state !== 'string') {
+        validationErrors.push({ field: 'state', message: 'State/Province is required for this country' });
+      } else {
+        // Validate state code matches country
+        if (country === 'US' && !US_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid US state code' });
+        }
+        if (country === 'CA' && !CA_PROVINCES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Canadian province code' });
+        }
+        if (country === 'AU' && !AU_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Australian state code' });
+        }
+        if (country === 'GB' && !GB_REGIONS.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid UK region code' });
+        }
+      }
+    }
+
+    // Validate city
+    if (!city || typeof city !== 'string') {
+      validationErrors.push({ field: 'city', message: 'City is required' });
+    } else if (city.trim().length < 2) {
+      validationErrors.push({ field: 'city', message: 'City must be at least 2 characters' });
     }
 
     if (!email || typeof email !== 'string') {
@@ -281,14 +320,17 @@ export async function startOnboarding(req: Request, res: Response) {
     try {
       const result = await pool.query(
         `INSERT INTO institutions (
-          institution_name, institution_type, location,
+          institution_name, institution_type, country, state, city, location_legacy,
           contact_name, email, phone, url_slug, access_type, onboarding_data
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id, url_slug, access_type, created_at`,
         [
           institutionName.trim(),
           institutionType,
-          location.trim(),
+          country,
+          state || null,
+          city.trim(),
+          location ? location.trim() : null, // Legacy field
           contactName.trim(),
           email.toLowerCase().trim(),
           phone.trim(),
