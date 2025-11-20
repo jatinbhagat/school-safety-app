@@ -638,7 +638,6 @@ export default function ReportingConfigEditor() {
           </div>
         </div>
       )}
-        </div>
       </div>
     </div>
   );
