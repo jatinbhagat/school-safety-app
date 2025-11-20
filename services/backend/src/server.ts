@@ -28,7 +28,7 @@ import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboa
 import { verifyEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
-import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins } from './handlers/institutions';
+import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
 import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
 
@@ -129,6 +129,7 @@ app.get('/api/institutions/:id', jwtAuth, getInstitution);
 app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
 app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
 app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
+app.post('/api/institutions/:id/admins', jwtAuth, addAdmin);
 
 // File upload endpoints (authenticated)
 app.post('/api/institutions/:id/logo', jwtAuth, ...uploadLogoHandler);

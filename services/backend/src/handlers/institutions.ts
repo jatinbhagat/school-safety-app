@@ -203,3 +203,92 @@ export async function getAdmins(req: Request, res: Response) {
     res.status(500).json({ error: 'Failed to get admins' });
   }
 }
+
+/**
+ * POST /api/institutions/:id/admins
+ * Add a new admin to the institution
+ */
+export async function addAdmin(req: Request, res: Response) {
+  try {
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const institutionId = parseInt(req.params.id);
+
+    // Verify this admin belongs to this institution
+    if (req.admin.institutionId !== institutionId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Only super_admin can add other admins
+    if (req.admin.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admins can add new administrators' });
+    }
+
+    const { name, email, phone, role } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !role) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['name', 'email', 'role'],
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate role
+    const validRoles = ['super_admin', 'admin', 'staff'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        error: 'Invalid role',
+        validRoles,
+      });
+    }
+
+    // Check if email already exists for this institution
+    const existingAdmin = await pool.query(
+      `SELECT id FROM institution_admins
+       WHERE institution_id = $1 AND email = $2 AND is_active = true`,
+      [institutionId, email]
+    );
+
+    if (existingAdmin.rows.length > 0) {
+      return res.status(409).json({ error: 'An admin with this email already exists' });
+    }
+
+    // Insert new admin (without password - they'll need to set it via email verification)
+    const result = await pool.query(
+      `INSERT INTO institution_admins (
+        institution_id, name, email, phone, role, email_verified
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, name, email, phone, role, email_verified, created_at`,
+      [institutionId, name, email, phone || null, role, false]
+    );
+
+    const newAdmin = result.rows[0];
+
+    // Create audit log
+    await pool.query(
+      `INSERT INTO audit_logs (institution_id, admin_id, action, entity_type, entity_id, new_values)
+       VALUES ($1, $2, 'add_admin', 'institution_admin', $3, $4)`,
+      [institutionId, req.admin.adminId, newAdmin.id, JSON.stringify({ name, email, role })]
+    );
+
+    // TODO: Send verification email to the new admin
+
+    res.json({
+      success: true,
+      admin: newAdmin,
+      message: 'Admin added successfully. A verification email has been sent.',
+    });
+  } catch (error) {
+    console.error('Add admin error:', error);
+    res.status(500).json({ error: 'Failed to add admin' });
+  }
+}

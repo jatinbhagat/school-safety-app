@@ -1,31 +1,146 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface Admin {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  email_verified: boolean;
+  last_login_at?: string;
+  created_at: string;
+}
+
+interface Institution {
+  id: number;
+  institution_name: string;
+  url_slug: string;
+  logo_url?: string;
+  brand_color?: string;
+  alerts_enabled: boolean;
+  reports_enabled: boolean;
+  notifications_enabled: boolean;
+  analytics_enabled: boolean;
+}
 
 export default function AdminSettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('branding');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<number | null>(null);
+
   const [settings, setSettings] = useState({
-    institutionName: 'Demo School',
-    urlSlug: 'demo-school',
+    institutionName: '',
+    urlSlug: '',
     logoUrl: '',
     brandColor: '#3B82F6',
     features: {
       alerts: true,
       reports: true,
       notifications: true,
-      analytics: true,
+      analytics: false,
     },
   });
 
-  const [admins, setAdmins] = useState([
-    { id: 1, name: 'John Doe', email: 'john@demoschool.edu', role: 'Super Admin' },
-    { id: 2, name: 'Jane Smith', email: 'jane@demoschool.edu', role: 'Admin' },
-  ]);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'admin',
+  });
 
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Fetch institution and admin data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Get current user to get institution ID
+      const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!meResponse.ok) {
+        throw new Error('Failed to get user info');
+      }
+
+      const userData = await meResponse.json();
+      const instId = userData.institutionId;
+      setInstitutionId(instId);
+
+      // Fetch institution details
+      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${instId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!instResponse.ok) {
+        throw new Error('Failed to fetch institution data');
+      }
+
+      const instData: Institution = await instResponse.json();
+
+      setSettings({
+        institutionName: instData.institution_name || '',
+        urlSlug: instData.url_slug || '',
+        logoUrl: instData.logo_url || '',
+        brandColor: instData.brand_color || '#3B82F6',
+        features: {
+          alerts: instData.alerts_enabled ?? true,
+          reports: instData.reports_enabled ?? true,
+          notifications: instData.notifications_enabled ?? true,
+          analytics: instData.analytics_enabled ?? false,
+        },
+      });
+
+      // Fetch admins
+      const adminsResponse = await fetch(`${API_BASE_URL}/api/institutions/${instId}/admins`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!adminsResponse.ok) {
+        throw new Error('Failed to fetch admins');
+      }
+
+      const adminsData: Admin[] = await adminsResponse.json();
+      setAdmins(adminsData);
+
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateSetting = (field: string, value: any) => {
     setSettings(prev => ({ ...prev, [field]: value }));
@@ -41,15 +156,108 @@ export default function AdminSettingsPage() {
     }));
   };
 
-  const handleSave = () => {
-    // In a real implementation, this would save to backend
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    if (!institutionId) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+
+      if (activeTab === 'branding') {
+        // Save branding settings
+        const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            institutionName: settings.institutionName,
+            brandColor: settings.brandColor,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save settings');
+        }
+      } else if (activeTab === 'features') {
+        // Save feature toggles
+        const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/features`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            alerts: settings.features.alerts,
+            reports: settings.features.reports,
+            notifications: settings.features.notifications,
+            analytics: settings.features.analytics,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save features');
+        }
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Save error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!institutionId) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+
+      const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(newAdmin),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add admin');
+      }
+
+      const result = await response.json();
+
+      // Add the new admin to the list
+      setAdmins([...admins, result.admin]);
+
+      // Reset form and close modal
+      setNewAdmin({ name: '', email: '', phone: '', role: 'admin' });
+      setShowAddAdminModal(false);
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Add admin error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add admin');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !institutionId) return;
 
     // Validate file type
     if (!['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'].includes(file.type)) {
@@ -66,22 +274,24 @@ export default function AdminSettingsPage() {
     setUploading(true);
 
     try {
-      // Create FormData for file upload
+      const token = localStorage.getItem('auth_token');
       const formData = new FormData();
       formData.append('logo', file);
 
-      // TODO: Replace with actual API endpoint when backend is ready
-      // const response = await fetch(`/api/institutions/${institutionId}/logo`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: formData,
-      // });
+      const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/logo`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-      // For now, create a local preview URL
-      const previewUrl = URL.createObjectURL(file);
-      updateSetting('logoUrl', previewUrl);
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const result = await response.json();
+      updateSetting('logoUrl', result.logoUrl);
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -97,12 +307,30 @@ export default function AdminSettingsPage() {
     fileInputRef.current?.click();
   };
 
+  const formatRole = (role: string) => {
+    if (role === 'super_admin') return 'Super Admin';
+    if (role === 'admin') return 'Admin';
+    if (role === 'staff') return 'Staff';
+    return role;
+  };
+
   const tabs = [
     { id: 'branding', name: 'Branding & URL', icon: '🎨' },
     { id: 'features', name: 'Features', icon: '⚙️' },
     { id: 'admins', name: 'Admin Users', icon: '👥' },
     { id: 'checklist', name: 'Onboarding Checklist', icon: '✓' },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,6 +359,16 @@ export default function AdminSettingsPage() {
             Manage your institution's branding, features, and administrative settings
           </p>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-700 font-semibold">{error}</span>
+          </div>
+        )}
 
         {/* Save Banner */}
         {saved && (
@@ -261,8 +499,8 @@ export default function AdminSettingsPage() {
                         <input
                           type="text"
                           value={settings.urlSlug}
-                          onChange={(e) => updateSetting('urlSlug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                          className="input flex-1"
+                          disabled
+                          className="input flex-1 bg-gray-100 cursor-not-allowed"
                           placeholder="your-institution"
                         />
                         <span className="text-gray-600">.safelynotify.com</span>
@@ -270,20 +508,9 @@ export default function AdminSettingsPage() {
                       <p className="mt-2 text-sm text-gray-500">
                         Your public kiosk URL: <strong className="text-blue-600">https://{settings.urlSlug || 'your-institution'}.safelynotify.com</strong>
                       </p>
-                    </div>
-
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-semibold text-yellow-800">Important Note</p>
-                          <p className="text-sm text-yellow-700 mt-1">
-                            Changing your URL slug will affect all existing links and QR codes. Make sure to update any printed materials.
-                          </p>
-                        </div>
-                      </div>
+                      <p className="mt-1 text-sm text-gray-400">
+                        URL slug cannot be changed after onboarding. Contact support if you need to update it.
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -299,8 +526,12 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <button onClick={handleSave} className="btn btn-primary px-8">
-                    Save Changes
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="btn btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
@@ -381,8 +612,12 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <button onClick={handleSave} className="btn btn-primary px-8">
-                    Save Changes
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="btn btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
@@ -397,7 +632,10 @@ export default function AdminSettingsPage() {
                       <h2 className="text-2xl font-bold text-gray-900">Administrator Users</h2>
                       <p className="text-gray-600">Manage who has access to your institution's admin panel</p>
                     </div>
-                    <button className="btn btn-primary">
+                    <button
+                      onClick={() => setShowAddAdminModal(true)}
+                      className="btn btn-primary"
+                    >
                       + Add Admin
                     </button>
                   </div>
@@ -414,17 +652,15 @@ export default function AdminSettingsPage() {
                           <div>
                             <h3 className="font-semibold text-gray-900">{admin.name}</h3>
                             <p className="text-sm text-gray-600">{admin.email}</p>
+                            {!admin.email_verified && (
+                              <span className="text-xs text-yellow-600">Email not verified</span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                            {admin.role}
+                            {formatRole(admin.role)}
                           </span>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     ))}
@@ -477,7 +713,10 @@ export default function AdminSettingsPage() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">Upload Institution Logo</h3>
                         <p className="text-sm text-gray-600 mb-2">Add your logo to customize the experience</p>
-                        <button className="text-blue-600 text-sm font-semibold hover:underline">
+                        <button
+                          onClick={() => setActiveTab('branding')}
+                          className="text-blue-600 text-sm font-semibold hover:underline"
+                        >
                           Upload now →
                         </button>
                       </div>
@@ -490,7 +729,10 @@ export default function AdminSettingsPage() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">Invite Staff Members</h3>
                         <p className="text-sm text-gray-600 mb-2">Add staff who should have admin access</p>
-                        <button className="text-blue-600 text-sm font-semibold hover:underline">
+                        <button
+                          onClick={() => setActiveTab('admins')}
+                          className="text-blue-600 text-sm font-semibold hover:underline"
+                        >
                           Invite staff →
                         </button>
                       </div>
@@ -528,6 +770,98 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Admin Modal */}
+      {showAddAdminModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Administrator</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={newAdmin.name}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                  className="input"
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={newAdmin.email}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                  className="input"
+                  placeholder="john@school.edu"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={newAdmin.phone}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, phone: e.target.value })}
+                  className="input"
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Role *
+                </label>
+                <select
+                  value={newAdmin.role}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, role: e.target.value })}
+                  className="input"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowAddAdminModal(false);
+                    setNewAdmin({ name: '', email: '', phone: '', role: 'admin' });
+                    setError(null);
+                  }}
+                  className="btn btn-secondary flex-1"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddAdmin}
+                  disabled={saving || !newAdmin.name || !newAdmin.email || !newAdmin.role}
+                  className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Adding...' : 'Add Admin'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
