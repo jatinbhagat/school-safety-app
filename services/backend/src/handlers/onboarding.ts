@@ -330,6 +330,7 @@ export async function startOnboarding(req: Request, res: Response) {
     // Insert institution
     let institution;
     try {
+      // Try new schema first (with country, state, city columns)
       const result = await pool.query(
         `INSERT INTO institutions (
           institution_name, institution_type, country, state, city, location_legacy,
@@ -360,6 +361,20 @@ export async function startOnboarding(req: Request, res: Response) {
       institution = result.rows[0];
     } catch (dbError: any) {
       console.error('[Onboarding] Database error creating institution:', dbError);
+
+      // Check if it's a missing column error (migration not run)
+      if (dbError.code === '42703' || dbError.message?.includes('column') || dbError.message?.includes('does not exist')) {
+        return res.status(500).json(
+          createErrorResponse(
+            OnboardingErrorCode.DATABASE_ERROR,
+            'Database schema is not up to date. Please run migrations: npm run migrate',
+            {
+              error: 'Missing database columns. Run: cd services/backend && npm run migrate',
+              technicalDetails: dbError.message,
+            }
+          )
+        );
+      }
 
       // Check for specific database errors
       if (dbError.code === '23505') { // Unique constraint violation
