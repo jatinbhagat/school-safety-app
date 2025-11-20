@@ -49,6 +49,8 @@ export default function OnboardingPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [institutionId, setInstitutionId] = useState<string | null>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -96,15 +98,45 @@ export default function OnboardingPage() {
   };
 
   const handleCompleteOnboarding = async () => {
-    if (!data.institutionName || !data.location || !data.email || !data.phone || !data.contactName || !data.password || !data.acceptedTerms) {
-      setError('Please fill in all required fields');
+    // Clear previous errors
+    setError('');
+    setErrorDetails(null);
+
+    // Client-side validation
+    const validationErrors: string[] = [];
+
+    if (!data.institutionName || data.institutionName.trim().length < 2) {
+      validationErrors.push('Institution name must be at least 2 characters');
+    }
+    if (!data.location || data.location.trim().length < 2) {
+      validationErrors.push('Location must be at least 2 characters');
+    }
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      validationErrors.push('Valid email address is required');
+    }
+    if (!data.phone || data.phone.replace(/\D/g, '').length < 10) {
+      validationErrors.push('Phone number must be at least 10 digits');
+    }
+    if (!data.contactName || data.contactName.trim().length < 2) {
+      validationErrors.push('Contact name must be at least 2 characters');
+    }
+    if (!data.password || data.password.length < 8) {
+      validationErrors.push('Password must be at least 8 characters');
+    }
+    if (!data.acceptedTerms) {
+      validationErrors.push('You must accept the terms and conditions');
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('. '));
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
+      console.log('[Frontend] Starting onboarding...');
+
       // Step 1: Start onboarding (create institution)
       const startResponse = await fetch(`${API_BASE_URL}/api/onboarding/start`, {
         method: 'POST',
@@ -121,24 +153,59 @@ export default function OnboardingPage() {
 
       if (!startResponse.ok) {
         const errorData = await startResponse.json();
-        throw new Error(errorData.error || 'Failed to start onboarding');
+        console.error('[Frontend] Start onboarding error:', errorData);
+
+        // Handle different error types
+        if (errorData.code === 'DUPLICATE_EMAIL') {
+          setError(
+            `This email is already registered${errorData.details?.existingInstitution ? ` for ${errorData.details.existingInstitution}` : ''}. ` +
+            `Please use a different email or contact support at ${errorData.details?.supportEmail || 'support@safelynotify.com'}`
+          );
+        } else if (errorData.code === 'VALIDATION_ERROR') {
+          // Display field-specific errors
+          if (errorData.details?.errors) {
+            const fieldErrors = errorData.details.errors.map((e: any) =>
+              `${e.field}: ${e.message}`
+            ).join('\n');
+            setError(errorData.message + ':\n' + fieldErrors);
+          } else {
+            setError(errorData.message);
+          }
+          setErrorDetails(errorData.details);
+        } else if (errorData.code === 'DATABASE_ERROR') {
+          setError('Database connection issue. Please check if the backend service is running and try again in a moment.');
+        } else {
+          setError(errorData.message || 'Failed to start onboarding. Please try again.');
+        }
+
+        setErrorDetails(errorData);
+        return;
       }
 
       const startData = await startResponse.json();
       const newInstitutionId = startData.institutionId;
       setInstitutionId(newInstitutionId);
 
+      console.log(`[Frontend] Institution created: ID=${newInstitutionId}, Slug=${startData.urlSlug}`);
+
+      // Auto-generate slug if not set
+      if (!data.urlSlug && startData.urlSlug) {
+        updateData('urlSlug', startData.urlSlug);
+      }
+
       // Step 2: Complete onboarding (create admin account and features)
       const staffEmailsArray = data.staffEmails
-        ? data.staffEmails.split(',').map(email => email.trim()).filter(email => email)
+        ? data.staffEmails.split(',').map(email => email.trim()).filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         : [];
+
+      console.log('[Frontend] Completing onboarding...');
 
       const completeResponse = await fetch(`${API_BASE_URL}/api/onboarding/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           institutionId: newInstitutionId,
-          urlSlug: data.urlSlug,
+          urlSlug: data.urlSlug || startData.urlSlug,
           features: data.features,
           staffEmails: staffEmailsArray,
           acceptedTerms: data.acceptedTerms,
@@ -148,10 +215,40 @@ export default function OnboardingPage() {
 
       if (!completeResponse.ok) {
         const errorData = await completeResponse.json();
-        throw new Error(errorData.error || 'Failed to complete onboarding');
+        console.error('[Frontend] Complete onboarding error:', errorData);
+
+        // Handle different error types
+        if (errorData.code === 'WEAK_PASSWORD') {
+          setError(errorData.message);
+          if (errorData.details?.requirements) {
+            setErrorDetails({
+              requirements: errorData.details.requirements
+            });
+          }
+        } else if (errorData.code === 'DUPLICATE_SLUG') {
+          setError('The URL slug is already taken. Please choose a different one.');
+        } else if (errorData.code === 'VALIDATION_ERROR') {
+          if (errorData.details?.errors) {
+            const fieldErrors = errorData.details.errors.map((e: any) =>
+              `${e.field}: ${e.message}`
+            ).join('\n');
+            setError(errorData.message + ':\n' + fieldErrors);
+          } else {
+            setError(errorData.message);
+          }
+          setErrorDetails(errorData.details);
+        } else if (errorData.code === 'INSTITUTION_NOT_FOUND') {
+          setError('Session expired. Please start the onboarding process again.');
+        } else {
+          setError(errorData.message || 'Failed to complete onboarding. Please try again.');
+        }
+
+        setErrorDetails(errorData);
+        return;
       }
 
       const completeData = await completeResponse.json();
+      console.log('[Frontend] Onboarding completed successfully');
 
       // Store JWT token
       if (completeData.accessToken) {
@@ -161,11 +258,33 @@ export default function OnboardingPage() {
       // Move to success step
       nextStep();
     } catch (err) {
-      console.error('Onboarding error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during onboarding');
+      console.error('[Frontend] Onboarding exception:', err);
+
+      // Handle network and other errors
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError(
+          'Cannot connect to the server. Please check:\n' +
+          '1. Is the backend service running on port 3001?\n' +
+          '2. Is your internet connection working?\n' +
+          '3. Is there a firewall blocking the connection?\n\n' +
+          'Try refreshing the page or contact support@safelynotify.com'
+        );
+      } else {
+        setError(
+          (err instanceof Error ? err.message : 'An unexpected error occurred') +
+          '\n\nIf the problem persists, please contact support@safelynotify.com'
+        );
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setError('');
+    setErrorDetails(null);
+    handleCompleteOnboarding();
   };
 
   return (
@@ -554,6 +673,43 @@ export default function OnboardingPage() {
               </div>
             )}
 
+            {/* Error Display */}
+            {error && (
+              <div className="p-6 bg-red-50 border-2 border-red-200 rounded-lg mb-6">
+                <div className="flex items-start gap-4">
+                  <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
+                    <p className="text-red-700 whitespace-pre-line">{error}</p>
+
+                    {/* Display password requirements if weak password */}
+                    {errorDetails?.requirements && (
+                      <div className="mt-4 p-3 bg-white rounded border border-red-300">
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Password Requirements:</p>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {errorDetails.requirements.map((req: string, idx: number) => (
+                            <li key={idx}>• {req}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Retry button for network errors */}
+                    {error.includes('Cannot connect') && (
+                      <button
+                        onClick={handleRetry}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all"
+                      >
+                        Retry Connection
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4 mt-8">
               <button
                 onClick={prevStep}
@@ -565,8 +721,14 @@ export default function OnboardingPage() {
               <button
                 onClick={handleCompleteOnboarding}
                 disabled={loading || !data.institutionName || !data.location || !data.email || !data.phone || !data.contactName || !data.password || !data.acceptedTerms}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
                 {loading ? 'Creating your account...' : 'Complete Onboarding →'}
               </button>
             </div>
