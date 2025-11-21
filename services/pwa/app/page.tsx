@@ -38,43 +38,49 @@ export default function HomePage() {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Stop Safety Incidents<br />
-            Before They Escalate
+            Safety Incidents Solved<br />
+            <span className="text-blue-600">in 5 Seconds</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-            <span className="font-semibold text-gray-800">60% of students don't report due to fear.</span> SafelyNotify.com empowers every student to report anonymously, routes incidents to the right staff in <span className="font-semibold text-blue-600">5 seconds</span>, and helps administrators prevent crises with intelligent pattern detection.
+          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            AI routes anonymous reports to the right staff instantly. <span className="font-semibold text-blue-600">85-90% accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
           </p>
 
           {/* Hero Statistics */}
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="text-4xl font-bold text-blue-600 mb-2">5 Sec</div>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="text-4xl font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-300">5 Sec</div>
               <div className="text-sm text-gray-600 font-medium">AI routes reports to the right staff instantly</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="text-4xl font-bold text-green-600 mb-2">85-90%</div>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="text-4xl font-bold text-green-600 mb-2 group-hover:scale-110 transition-transform duration-300">85-90%</div>
               <div className="text-sm text-gray-600 font-medium">Intelligent triage accuracy with confidence scoring</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="text-4xl font-bold text-purple-600 mb-2">70%</div>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 group">
+              <div className="text-4xl font-bold text-purple-600 mb-2 group-hover:scale-110 transition-transform duration-300">70%</div>
               <div className="text-sm text-gray-600 font-medium">Less administrative workload compared to manual</div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
             <Link
               href="/onboarding"
-              className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105"
             >
-              Get Free Access (First 100 Schools & Colleges)
+              Start Free
             </Link>
             <Link
               href="/demo"
-              className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 border-2 border-gray-300 rounded-lg font-semibold text-lg hover:border-gray-400 transition-all"
+              className="w-full sm:w-auto px-10 py-5 bg-white text-gray-900 border-2 border-gray-300 rounded-xl font-semibold text-xl hover:border-gray-400 hover:shadow-lg transition-all transform hover:-translate-y-0.5"
             >
-              Watch 2-Minute Demo
+              Watch Demo
             </Link>
+          </div>
+          
+          <div className="text-center mb-8">
+            <p className="text-lg text-gray-700 font-medium">
+              First 100 schools get 1 year free
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
@@ -96,7 +102,7 @@ export default function HomePage() {
               <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>2-Week Setup</span>
+              <span>Instant Setup</span>
             </div>
             <span className="text-gray-300">•</span>
             <div className="flex items-center gap-2">
@@ -113,7 +119,7 @@ export default function HomePage() {
       <section className="py-16 bg-gray-50 border-y border-gray-100 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
-            Why Traditional Safety Reporting Fails Students
+            Why Students Stay Silent
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white rounded-xl p-8 shadow-md border border-gray-200">
@@ -147,10 +153,10 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            AI-Powered Safety Platform Designed for Education
+            Complete Safety Platform
           </h2>
           <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
-            Every feature built specifically for schools and colleges with student safety, privacy, and administrator efficiency in mind.
+            AI-powered incident management built specifically for schools and colleges.
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -426,54 +432,54 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-blue-50 to-white px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            From Report to Resolution in Minutes, Not Days
+            Report → AI → Response → Prevention
           </h2>
           <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
-            Our AI-powered workflow ensures every incident is handled swiftly and appropriately.
+            Our AI-powered workflow handles incidents swiftly and appropriately.
           </p>
 
           <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">📱</span>
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 group-hover:scale-110 transition-all duration-300">
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-300">📱</span>
               </div>
               <div className="text-sm font-bold text-purple-600 mb-2">STEP 1</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Student Reports</h3>
               <p className="text-gray-600 text-sm">
-                Student scans QR code, submits anonymous report in 30 seconds
+                Anonymous report in 30 seconds
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🤖</span>
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 group-hover:scale-110 transition-all duration-300">
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-300">🤖</span>
               </div>
               <div className="text-sm font-bold text-blue-600 mb-2">STEP 2</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">AI Analyzes</h3>
               <p className="text-gray-600 text-sm">
-                AI routes to right staff with 90% accuracy in 5 seconds
+                90% accuracy in 5 seconds
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">👨‍💼</span>
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 group-hover:scale-110 transition-all duration-300">
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-300">👨‍💼</span>
               </div>
               <div className="text-sm font-bold text-green-600 mb-2">STEP 3</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Staff Responds</h3>
               <p className="text-gray-600 text-sm">
-                Staff receives notification and accepts case immediately
+                Immediate notification & response
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">📊</span>
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 group-hover:scale-110 transition-all duration-300">
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-300">📊</span>
               </div>
               <div className="text-sm font-bold text-orange-600 mb-2">STEP 4</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Pattern Detected</h3>
               <p className="text-gray-600 text-sm">
-                Admins see trends and deploy resources strategically
+                Strategic resource deployment
               </p>
             </div>
           </div>
@@ -583,10 +589,10 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            First 100 Schools & Colleges Get 1 Year Free
+            Join 100 Schools Getting Free Access
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            We're on a mission to make every campus safer. Educational institutions in the first 100 get complimentary access for 1 year—no credit card, no commitment, no catch.
+            We're making every campus safer. First 100 schools get 1 year free—no credit card, no commitment.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10 text-left">
@@ -643,15 +649,15 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link
               href="/onboarding"
-              className="px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-all shadow-xl transform hover:scale-105"
+              className="px-10 py-5 bg-white text-blue-600 rounded-xl font-bold text-xl hover:bg-gray-50 transition-all shadow-xl transform hover:scale-105 hover:-translate-y-1"
             >
-              Claim Your Free Access (Schools & Colleges)
+              Claim Free Access
             </Link>
             <Link
               href="/demo"
-              className="px-8 py-4 bg-blue-500 text-white border-2 border-blue-400 rounded-lg font-semibold text-lg hover:bg-blue-400 transition-all"
+              className="px-10 py-5 bg-blue-500 text-white border-2 border-blue-400 rounded-xl font-semibold text-xl hover:bg-blue-400 transition-all transform hover:-translate-y-0.5"
             >
-              Book Live Demo (Corporates & NGOs)
+              Book Demo
             </Link>
           </div>
 
@@ -660,14 +666,14 @@ export default function HomePage() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
-              <span>Setup in 2-4 weeks</span>
+              <span>Ready in 2 weeks</span>
             </div>
             <span>•</span>
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
               </svg>
-              <span>White-glove onboarding included</span>
+              <span>Full onboarding support</span>
             </div>
             <span>•</span>
             <div className="flex items-center gap-2">
