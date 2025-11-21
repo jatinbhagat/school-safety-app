@@ -4,27 +4,43 @@ interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   priority?: boolean;
+  showText?: boolean;
 }
 
 const sizeClasses = {
-  xs: 'h-6 w-auto', // 24px height
-  sm: 'h-8 w-auto', // 32px height  
-  md: 'h-12 w-auto', // 48px height
-  lg: 'h-16 w-auto', // 64px height
-  xl: 'h-20 w-auto', // 80px height
+  xs: 'h-8 w-5', // 32px height, proportional width
+  sm: 'h-10 w-6', // 40px height, proportional width  
+  md: 'h-14 w-9', // 56px height, proportional width
+  lg: 'h-20 w-12', // 80px height, proportional width
+  xl: 'h-24 w-16', // 96px height, proportional width
 };
 
-export default function Logo({ size = 'md', className = '', priority = false }: LogoProps) {
+const textSizeClasses = {
+  xs: 'text-lg font-bold',
+  sm: 'text-xl font-bold',
+  md: 'text-2xl font-bold',
+  lg: 'text-3xl font-bold',
+  xl: 'text-4xl font-bold',
+};
+
+export default function Logo({ size = 'md', className = '', priority = false, showText = true }: LogoProps) {
   return (
-    <div className={`${sizeClasses[size]} ${className}`}>
-      <Image
-        src="/logo.svg"
-        alt="SafelyNotify"
-        width={500}
-        height={800}
-        className="h-full w-auto object-contain"
-        priority={priority}
-      />
+    <div className={`flex items-center gap-3 ${className}`}>
+      <div className={sizeClasses[size]}>
+        <Image
+          src="/logo.png"
+          alt="SafelyNotify"
+          width={500}
+          height={800}
+          className="h-full w-full object-contain"
+          priority={priority}
+        />
+      </div>
+      {showText && (
+        <span className={`${textSizeClasses[size]} text-blue-600`}>
+          SafelyNotify
+        </span>
+      )}
     </div>
   );
 }
