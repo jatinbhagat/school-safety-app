@@ -14,12 +14,31 @@ interface Category {
   color?: string;
 }
 
+interface CategoryFieldConfig {
+  field_key: string;
+  required: boolean;
+  enabled: boolean;
+  order: number;
+  pii?: boolean;
+  help_text?: string;
+  placeholder?: string;
+}
+
 interface CategoryConfig {
   id: string;
   name: string;
   description?: string;
   order: number;
-  fields: any[];
+  fields: CategoryFieldConfig[];
+}
+
+interface FieldDefinition {
+  name: string;
+  type: string;
+  options?: { values?: string[] };
+  pii_flag?: boolean;
+  help_text?: string;
+  placeholder?: string;
 }
 
 interface TenantConfig {
@@ -37,6 +56,8 @@ const DEFAULT_COLORS = [
 export default function KioskPage({ params }: { params: { slug: string } }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [description, setDescription] = useState('');
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -46,6 +67,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
+  const [catalog, setCatalog] = useState<Map<string, FieldDefinition>>(new Map());
   const [loading, setLoading] = useState(true);
   const [institutionInfo, setInstitutionInfo] = useState<any>(null);
 
@@ -64,6 +86,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
     // Fetch institution and reporting config
     fetchInstitutionAndConfig();
 
+    // Load fields catalog
+    loadCatalog();
+
     // Monitor online/offline status
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -79,6 +104,20 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const loadCatalog = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reporting/fields/catalog`);
+      const data = await response.json();
+      const catalogMap = new Map<string, FieldDefinition>();
+      data.fields.forEach((field: FieldDefinition) => {
+        catalogMap.set(field.name, field);
+      });
+      setCatalog(catalogMap);
+    } catch (error) {
+      console.error('Failed to load catalog:', error);
+    }
+  };
 
   const fetchInstitutionAndConfig = async () => {
     try {
@@ -153,16 +192,200 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setDescription('');
+    setFormData({});
+    setFormErrors({});
     setShowSuccess(false);
   };
 
   const handleClose = () => {
     setSelectedCategory(null);
     setDescription('');
+    setFormData({});
+    setFormErrors({});
+  };
+
+  const validateForm = (): boolean => {
+    if (!selectedCategory || !tenantConfig) return false;
+
+    const categoryConfig = tenantConfig.categories.find(c => c.id === selectedCategory);
+    if (!categoryConfig) return false;
+
+    const newErrors: Record<string, string> = {};
+
+    for (const fieldConfig of categoryConfig.fields) {
+      if (!fieldConfig.enabled) continue;
+
+      const value = formData[fieldConfig.field_key];
+      const fieldDef = catalog.get(fieldConfig.field_key);
+
+      if (fieldConfig.required && (!value || value === '')) {
+        newErrors[fieldConfig.field_key] = 'This field is required';
+        continue;
+      }
+
+      // Type-specific validation
+      if (value && fieldDef) {
+        if (fieldDef.type === 'email') {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value)) {
+            newErrors[fieldConfig.field_key] = 'Invalid email address';
+          }
+        }
+
+        if (fieldDef.type === 'phone') {
+          const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
+          if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+            newErrors[fieldConfig.field_key] = 'Invalid phone number';
+          }
+        }
+      }
+    }
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const renderField = (fieldConfig: CategoryFieldConfig) => {
+    const fieldDef = catalog.get(fieldConfig.field_key);
+    if (!fieldDef || !fieldConfig.enabled) return null;
+
+    const value = formData[fieldConfig.field_key] || '';
+    const error = formErrors[fieldConfig.field_key];
+
+    const handleChange = (newValue: any) => {
+      setFormData({ ...formData, [fieldConfig.field_key]: newValue });
+      if (error) {
+        const newErrors = { ...formErrors };
+        delete newErrors[fieldConfig.field_key];
+        setFormErrors(newErrors);
+      }
+    };
+
+    const labelClasses = 'block text-sm font-medium mb-1';
+    const inputClasses = `w-full px-3 py-2 border rounded-lg transition-all ${
+      error ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+    }`;
+
+    const fieldLabel = fieldConfig.field_key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+
+    return (
+      <div key={fieldConfig.field_key} style={styles.formGroup}>
+        <label style={styles.label}>
+          {fieldLabel}
+          {fieldConfig.required && <span style={{ color: '#EF4444', marginLeft: '4px' }}>*</span>}
+          {fieldConfig.pii && (
+            <span style={{
+              marginLeft: '8px',
+              fontSize: '0.75rem',
+              backgroundColor: '#FFF7ED',
+              color: '#C2410C',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontWeight: '500'
+            }}>
+              🔒 Optional PII
+            </span>
+          )}
+        </label>
+
+        {(fieldConfig.help_text || fieldDef.help_text) && (
+          <p style={{ fontSize: '0.75rem', color: '#6B7280', marginBottom: '8px' }}>
+            {fieldConfig.help_text || fieldDef.help_text}
+          </p>
+        )}
+
+        {fieldDef.type === 'textarea' && (
+          <textarea
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            className={inputClasses}
+            rows={4}
+            placeholder={fieldConfig.placeholder || fieldDef.placeholder || ''}
+            style={{
+              ...styles.textarea,
+              borderColor: error ? '#EF4444' : undefined,
+              backgroundColor: error ? '#FEF2F2' : undefined,
+            }}
+          />
+        )}
+
+        {(fieldDef.type === 'text' || fieldDef.type === 'email' || fieldDef.type === 'phone') && (
+          <input
+            type={fieldDef.type === 'email' ? 'email' : fieldDef.type === 'phone' ? 'tel' : 'text'}
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={fieldConfig.placeholder || fieldDef.placeholder || ''}
+            style={{
+              ...styles.textarea,
+              height: 'auto',
+              borderColor: error ? '#EF4444' : undefined,
+              backgroundColor: error ? '#FEF2F2' : undefined,
+            }}
+          />
+        )}
+
+        {fieldDef.type === 'select' && (
+          <select
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            style={{
+              ...styles.textarea,
+              height: 'auto',
+              borderColor: error ? '#EF4444' : undefined,
+              backgroundColor: error ? '#FEF2F2' : undefined,
+            }}
+          >
+            <option value="">Select...</option>
+            {fieldDef.options?.values?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {fieldDef.type === 'boolean' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              checked={value === true}
+              onChange={(e) => handleChange(e.target.checked)}
+              style={{ width: '16px', height: '16px' }}
+            />
+            <span style={{ fontSize: '0.875rem' }}>Yes</span>
+          </label>
+        )}
+
+        {fieldDef.type === 'date' && (
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            style={{
+              ...styles.textarea,
+              height: 'auto',
+              borderColor: error ? '#EF4444' : undefined,
+              backgroundColor: error ? '#FEF2F2' : undefined,
+            }}
+          />
+        )}
+
+        {error && (
+          <p style={{ color: '#EF4444', fontSize: '0.875rem', marginTop: '4px' }}>
+            {error}
+          </p>
+        )}
+      </div>
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     const report: Report = {
@@ -176,7 +399,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
     try {
       if (effectiveOnline) {
-        // Try to send directly
+        // Try to send directly with dynamic fields
         const response = await fetch('http://localhost:3001/report', {
           method: 'POST',
           headers: {
@@ -186,6 +409,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
             schoolSlug: report.schoolSlug,
             category: report.category,
             description: report.description,
+            dynamic_fields: formData,
           }),
         });
 
@@ -348,18 +572,54 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
                 </h2>
 
                 <form onSubmit={handleSubmit}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>
-                      Additional Details (Optional)
-                    </label>
-                    <textarea
-                      style={styles.textarea}
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Provide any additional information..."
-                      rows={4}
-                    />
-                  </div>
+                  {(() => {
+                    const categoryConfig = tenantConfig?.categories.find(c => c.id === selectedCategory);
+                    if (!categoryConfig) {
+                      return (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>
+                            Additional Details (Optional)
+                          </label>
+                          <textarea
+                            style={styles.textarea}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Provide any additional information..."
+                            rows={4}
+                          />
+                        </div>
+                      );
+                    }
+
+                    // Render configured fields
+                    const enabledFields = categoryConfig.fields
+                      .filter(f => f.enabled)
+                      .sort((a, b) => a.order - b.order);
+
+                    if (enabledFields.length === 0) {
+                      // Fallback to description if no fields configured
+                      return (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>
+                            Additional Details (Optional)
+                          </label>
+                          <textarea
+                            style={styles.textarea}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Provide any additional information..."
+                            rows={4}
+                          />
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {enabledFields.map(field => renderField(field))}
+                      </>
+                    );
+                  })()}
 
                   <div style={styles.buttonGroup}>
                     <button
