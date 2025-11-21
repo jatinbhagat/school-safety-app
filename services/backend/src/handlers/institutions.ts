@@ -19,7 +19,12 @@ export async function getInstitution(req: Request, res: Response) {
     }
 
     const result = await pool.query(
-      `SELECT i.*, f.*
+      `SELECT i.id, i.institution_name, i.institution_type, i.location,
+              i.contact_name, i.email, i.phone, i.url_slug, i.logo_url,
+              i.brand_color, i.access_type, i.onboarding_completed, i.is_active,
+              i.tenant_id, i.created_at, i.updated_at,
+              f.alerts_enabled, f.reports_enabled,
+              f.notifications_enabled, f.analytics_enabled
        FROM institutions i
        LEFT JOIN institution_features f ON f.institution_id = i.id
        WHERE i.id = $1`,
@@ -47,7 +52,7 @@ export async function getInstitutionBySlug(req: Request, res: Response) {
 
     const result = await pool.query(
       `SELECT i.id, i.institution_name, i.institution_type, i.url_slug,
-              i.logo_url, i.brand_color, i.is_active,
+              i.logo_url, i.brand_color, i.is_active, i.tenant_id,
               f.alerts_enabled, f.reports_enabled,
               f.notifications_enabled, f.analytics_enabled
        FROM institutions i

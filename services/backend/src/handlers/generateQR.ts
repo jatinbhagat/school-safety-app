@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import QRCode from 'qrcode';
 import { pool } from '../db';
-import { uploadQRCode } from '../utils/s3';
+import { uploadQRCode } from '../utils/localStorage';
 
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 

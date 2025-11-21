@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import path from 'path';
 import * as dotenv from 'dotenv';
 import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
@@ -21,6 +22,7 @@ import { getStaffStats } from './handlers/getStaffStats';
 import { pool } from './db';
 import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
+import { initializeStorage } from './utils/localStorage';
 
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
@@ -41,6 +43,10 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from uploads directory
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -172,6 +178,13 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// Initialize storage on startup
+initializeStorage().then(() => {
+  console.log('✅ Storage initialized');
+}).catch(err => {
+  console.error('❌ Failed to initialize storage:', err);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 School Safety Backend running on port ${PORT}`);
@@ -179,6 +192,7 @@ app.listen(PORT, () => {
   console.log(`📝 Report endpoint: http://localhost:${PORT}/report`);
   console.log(`📋 Incidents list: http://localhost:${PORT}/incidents`);
   console.log(`✅ Assign incident: POST http://localhost:${PORT}/incidents/:id/assign`);
+  console.log(`📁 Uploads directory: ${uploadsDir}`);
 });
 
 // Graceful shutdown

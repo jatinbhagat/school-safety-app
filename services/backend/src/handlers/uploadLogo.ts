@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import multer from 'multer';
 import { pool } from '../db';
-import { uploadLogo } from '../utils/s3';
+import { uploadLogo } from '../utils/localStorage';
 
 // Configure multer for memory storage
 const upload = multer({

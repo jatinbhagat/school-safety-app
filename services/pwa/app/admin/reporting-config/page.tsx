@@ -63,7 +63,8 @@ export default function ReportingConfigEditor() {
   const [catalog, setCatalog] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tenantId, setTenantId] = useState('demo');
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPIIWarning, setShowPIIWarning] = useState(false);
   const [piiFieldToEnable, setPIIFieldToEnable] = useState<{ categoryId: string; fieldKey: string } | null>(null);
@@ -83,7 +84,10 @@ export default function ReportingConfigEditor() {
   const fetchUserInfo = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
       const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -95,13 +99,20 @@ export default function ReportingConfigEditor() {
         setUserRole(userData.role || '');
 
         // Get institution details
-        const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${userData.institutionId}`, {
+        const instId = userData.institution?.id || userData.institutionId;
+        setInstitutionId(instId);
+
+        const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${instId}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
         if (instResponse.ok) {
           const instData = await instResponse.json();
           setInstitutionName(instData.institution_name || '');
+
+          // Set tenant ID from institution
+          // If tenant_id is not set, fall back to demo
+          setTenantId(instData.tenant_id || 'demo');
         }
       }
     } catch (err) {
@@ -110,8 +121,10 @@ export default function ReportingConfigEditor() {
   };
 
   const loadConfig = async () => {
+    if (!tenantId) return;
+
     try {
-      const response = await fetch(`http://localhost:3001/api/tenant/${tenantId}/reporting-config`);
+      const response = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
       const data = await response.json();
       setConfig(data.config);
       if (data.config.categories.length > 0) {
@@ -126,7 +139,7 @@ export default function ReportingConfigEditor() {
 
   const loadCatalog = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/reporting/fields/catalog');
+      const response = await fetch(`${API_BASE_URL}/api/reporting/fields/catalog`);
       const data = await response.json();
       setCatalog(data.fields);
     } catch (error) {
@@ -135,15 +148,22 @@ export default function ReportingConfigEditor() {
   };
 
   const saveConfig = async () => {
-    if (!config) return;
+    if (!config || !tenantId) return;
+
+    // Validate minimum 3 categories
+    if (config.categories.length < 3) {
+      alert('Configuration must have at least 3 categories');
+      return;
+    }
 
     setSaving(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/tenant/${tenantId}/reporting-config`, {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add auth token
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ config }),
       });
@@ -182,6 +202,13 @@ export default function ReportingConfigEditor() {
 
   const removeCategory = (categoryId: string) => {
     if (!config) return;
+
+    // Enforce minimum 3 categories
+    if (config.categories.length <= 3) {
+      alert('Cannot remove category. Minimum 3 categories required.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to remove this category?')) return;
 
     const filtered = config.categories.filter((c) => c.id !== categoryId);
@@ -351,16 +378,12 @@ export default function ReportingConfigEditor() {
           <p className="text-gray-600">Configure incident reporting categories and dynamic fields</p>
         </div>
 
-        {/* Tenant Selector */}
+        {/* Institution Info */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <label className="block text-sm font-medium mb-2">Tenant ID</label>
-          <input
-            type="text"
-            value={tenantId}
-            onChange={(e) => setTenantId(e.target.value)}
-            className="border rounded px-3 py-2 w-64"
-            placeholder="Enter tenant ID or 'demo'"
-          />
+          <div className="text-sm text-gray-600">
+            <p><strong>Institution:</strong> {institutionName}</p>
+            {tenantId && <p className="mt-1"><strong>Tenant ID:</strong> {tenantId}</p>}
+          </div>
         </div>
 
         {/* Actions */}
