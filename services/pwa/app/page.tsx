@@ -1,9 +1,64 @@
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "SafelyNotify",
+  "url": "https://safelynotify.com",
+  "logo": "https://safelynotify.com/logo.png",
+  "description": "AI-powered anonymous incident reporting platform for schools",
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer service",
+    "email": "support@safelynotify.com"
+  },
+  "sameAs": [
+    "https://twitter.com/safelynotify",
+    "https://linkedin.com/company/safelynotify"
+  ]
+};
+
+const productStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SafelyNotify",
+  "applicationCategory": "Educational Safety Software",
+  "description": "Anonymous incident reporting platform with AI-powered routing for educational institutions",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "priceValidUntil": "2025-12-31",
+    "description": "Free trial available"
+  },
+  "featureList": [
+    "Anonymous incident reporting",
+    "AI-powered intelligent routing",
+    "Real-time safety alerts",
+    "FERPA compliance",
+    "Predictive analytics"
+  ],
+  "operatingSystem": "Web-based",
+  "publisher": {
+    "@type": "Organization",
+    "name": "SafelyNotify"
+  }
+};
+
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <>
+      <script 
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script 
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
+      />
+      
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Navigation */}
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,15 +68,18 @@ export default function HomePage() {
                 <Logo size="lg" priority />
               </Link>
             </div>
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6">
               <Link href="/features" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
                 Features
               </Link>
-              <Link href="/onboarding" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Get Started
-              </Link>
               <Link href="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
                 Admin Login
+              </Link>
+              <Link 
+                href="/onboarding" 
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-sm hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 hover:scale-105"
+              >
+                Get Started
               </Link>
             </div>
           </div>
@@ -38,12 +96,12 @@ export default function HomePage() {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Safety Incidents Solved<br />
-            <span className="text-blue-600">in 5 Seconds</span>
+            Anonymous Incident Reporting<br />
+            <span className="text-blue-600">Platform for Schools</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            AI routes anonymous reports to the right staff instantly. <span className="font-semibold text-blue-600">85-90% accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
+            Students report safely. Staff respond instantly. Patterns emerge clearly. <span className="font-semibold text-blue-600">85-90% AI accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
           </p>
 
           {/* Hero Statistics */}
@@ -67,7 +125,7 @@ export default function HomePage() {
               href="/onboarding"
               className="w-full sm:w-auto px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105"
             >
-              Start Free
+              Start Free Trial
             </Link>
             <Link
               href="/demo"
@@ -79,7 +137,7 @@ export default function HomePage() {
           
           <div className="text-center mb-8">
             <p className="text-lg text-gray-700 font-medium">
-              First 100 schools get 1 year free
+              No Credit Card Required
             </p>
           </div>
 
@@ -589,10 +647,10 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Join 100 Schools Getting Free Access
+            Make Your Campus Safer Today
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            We're making every campus safer. First 100 schools get 1 year free—no credit card, no commitment.
+            Join schools nationwide using SafelyNotify to create safer learning environments. Start your free trial—no credit card, no commitment.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10 text-left">
@@ -651,7 +709,7 @@ export default function HomePage() {
               href="/onboarding"
               className="px-10 py-5 bg-white text-blue-600 rounded-xl font-bold text-xl hover:bg-gray-50 transition-all shadow-xl transform hover:scale-105 hover:-translate-y-1"
             >
-              Claim Free Access
+              Start Free Trial
             </Link>
             <Link
               href="/demo"
@@ -710,9 +768,9 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
               </ul>
             </div>
           </div>
@@ -721,6 +779,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }
