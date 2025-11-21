@@ -327,6 +327,9 @@ export async function startOnboarding(req: Request, res: Response) {
       );
     }
 
+    // Generate a unique tenant_id for this institution
+    const tenantId = require('crypto').randomUUID();
+
     // Insert institution
     let institution;
     try {
@@ -334,9 +337,9 @@ export async function startOnboarding(req: Request, res: Response) {
       const result = await pool.query(
         `INSERT INTO institutions (
           institution_name, institution_type, country, state, city, location_legacy,
-          contact_name, email, phone, url_slug, access_type, onboarding_data
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        RETURNING id, url_slug, access_type, created_at`,
+          contact_name, email, phone, url_slug, access_type, tenant_id, onboarding_data
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING id, url_slug, access_type, tenant_id, created_at`,
         [
           institutionName.trim(),
           institutionType,
@@ -349,6 +352,7 @@ export async function startOnboarding(req: Request, res: Response) {
           phone.trim(),
           finalSlug,
           accessType,
+          tenantId,
           JSON.stringify({
             ...req.body,
             ip: req.ip,
@@ -578,6 +582,41 @@ export async function completeOnboarding(req: Request, res: Response) {
           features?.analytics ?? false,
         ]
       );
+
+      // Create tenant reporting config by cloning from demo tenant
+      // Only if tenant_id exists and config doesn't already exist
+      if (institution.tenant_id) {
+        await client.query(
+          `INSERT INTO tenant_reporting_config (tenant_id, config)
+           SELECT $1, config
+           FROM tenant_reporting_config
+           WHERE tenant_id = '00000000-0000-0000-0000-000000000001'
+           ON CONFLICT (tenant_id) DO NOTHING`,
+          [institution.tenant_id]
+        );
+        console.log(`[Onboarding] Created tenant config for tenant_id: ${institution.tenant_id}`);
+      }
+
+      // Copy default routing rules for this institution
+      const defaultRulesResult = await client.query(
+        `SELECT keyword, staff_role, priority_boost, rule_type
+         FROM routing_rules
+         WHERE institution_id IS NULL OR institution_id = 0
+         LIMIT 20`
+      );
+
+      if (defaultRulesResult.rows.length > 0) {
+        for (const rule of defaultRulesResult.rows) {
+          await client.query(
+            `INSERT INTO routing_rules (
+              institution_id, keyword, staff_role, priority_boost, rule_type, is_active
+            ) VALUES ($1, $2, $3, $4, $5, true)
+            ON CONFLICT (institution_id, keyword, staff_role) DO NOTHING`,
+            [institutionId, rule.keyword, rule.staff_role, rule.priority_boost, rule.rule_type]
+          );
+        }
+        console.log(`[Onboarding] Copied ${defaultRulesResult.rows.length} default routing rules`);
+      }
 
       // Create staff members if provided
       if (staffEmails && Array.isArray(staffEmails) && staffEmails.length > 0) {

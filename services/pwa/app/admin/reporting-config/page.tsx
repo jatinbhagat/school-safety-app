@@ -69,9 +69,11 @@ export default function ReportingConfigEditor() {
   const [showPIIWarning, setShowPIIWarning] = useState(false);
   const [piiFieldToEnable, setPIIFieldToEnable] = useState<{ categoryId: string; fieldKey: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewCategoryId, setPreviewCategoryId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('');
   const [institutionName, setInstitutionName] = useState<string>('');
+  const [institutionSlug, setInstitutionSlug] = useState<string>('');
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -109,10 +111,15 @@ export default function ReportingConfigEditor() {
         if (instResponse.ok) {
           const instData = await instResponse.json();
           setInstitutionName(instData.institution_name || '');
+          setInstitutionSlug(instData.url_slug || '');
 
           // Set tenant ID from institution
-          // If tenant_id is not set, fall back to demo
-          setTenantId(instData.tenant_id || 'demo');
+          if (!instData.tenant_id) {
+            console.error('Institution missing tenant_id. Please contact support.');
+            alert('Configuration error: Institution is missing tenant ID. Please contact support.');
+            return;
+          }
+          setTenantId(instData.tenant_id);
         }
       }
     } catch (err) {
@@ -365,6 +372,7 @@ export default function ReportingConfigEditor() {
     <div className="min-h-screen bg-gray-50">
       <AdminNavbar
         institutionName={institutionName}
+        institutionSlug={institutionSlug}
         userRole={userRole}
         userName={userName}
       />
@@ -397,10 +405,13 @@ export default function ReportingConfigEditor() {
               {saving ? 'Saving...' : 'Save Configuration'}
             </button>
             <button
-              onClick={() => setShowPreview(true)}
+              onClick={() => {
+                setPreviewCategoryId(null); // null means preview all
+                setShowPreview(true);
+              }}
               className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
             >
-              Preview Kiosk Form
+              Preview All Categories
             </button>
             <button
               onClick={exportConfig}
@@ -549,12 +560,23 @@ export default function ReportingConfigEditor() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => removeCategory(activeConfig.id)}
-                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
-                >
-                  Delete Category
-                </button>
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => {
+                      setPreviewCategoryId(activeConfig.id);
+                      setShowPreview(true);
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  >
+                    Preview This Category
+                  </button>
+                  <button
+                    onClick={() => removeCategory(activeConfig.id)}
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                  >
+                    Delete Category
+                  </button>
+                </div>
               </>
             ) : (
               <div className="text-center text-gray-500 py-12">
@@ -607,16 +629,32 @@ export default function ReportingConfigEditor() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8 overflow-auto">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-full overflow-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold">Kiosk Form Preview</h3>
+              <h3 className="text-2xl font-bold">
+                {previewCategoryId
+                  ? `Preview: ${config.categories.find(c => c.id === previewCategoryId)?.name}`
+                  : 'Kiosk Form Preview (All Categories)'}
+              </h3>
               <button
-                onClick={() => setShowPreview(false)}
+                onClick={() => {
+                  setShowPreview(false);
+                  setPreviewCategoryId(null);
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 ×
               </button>
             </div>
+            {previewCategoryId && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  This preview shows how the form will look when a user clicks the "{config.categories.find(c => c.id === previewCategoryId)?.name}" button on the kiosk.
+                </p>
+              </div>
+            )}
             <div className="space-y-6">
-              {config.categories.map((category) => (
+              {config.categories
+                .filter((category) => !previewCategoryId || category.id === previewCategoryId)
+                .map((category) => (
                 <div key={category.id} className="border-b pb-6">
                   <h4 className="text-lg font-bold mb-2">{category.name}</h4>
                   <p className="text-sm text-gray-600 mb-4">{category.description}</p>

@@ -17,8 +17,8 @@ export default function HomePage() {
               <Link href="/onboarding" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
                 Get Started
               </Link>
-              <Link href="/admin" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Admin
+              <Link href="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
+                Admin Login
               </Link>
             </div>
           </div>

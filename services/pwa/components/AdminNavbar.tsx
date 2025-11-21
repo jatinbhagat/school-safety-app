@@ -6,11 +6,12 @@ import { usePathname, useRouter } from 'next/navigation';
 
 interface AdminNavbarProps {
   institutionName?: string;
+  institutionSlug?: string;
   userRole?: string;
   userName?: string;
 }
 
-export default function AdminNavbar({ institutionName, userRole, userName }: AdminNavbarProps) {
+export default function AdminNavbar({ institutionName, institutionSlug, userRole, userName }: AdminNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function AdminNavbar({ institutionName, userRole, userName }: Adm
     { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
     { href: '/admin/reporting-config', label: 'Reporting Config', icon: '📝' },
     { href: '/admin/guides', label: 'Guides', icon: '📚' },
+    ...(institutionSlug ? [{ href: `/kiosk/${institutionSlug}`, label: 'View Kiosk', icon: '📱', external: true }] : []),
   ];
 
   const isActive = (href: string) => {
