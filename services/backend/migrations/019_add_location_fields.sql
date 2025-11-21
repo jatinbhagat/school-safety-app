@@ -13,6 +13,10 @@ UPDATE institutions
 SET location_legacy = location
 WHERE location IS NOT NULL AND location != '';
 
+-- Make the old location column nullable (no longer required for new records)
+ALTER TABLE institutions
+ALTER COLUMN location DROP NOT NULL;
+
 -- Add indexes for faster lookups
 CREATE INDEX idx_institutions_country ON institutions(country);
 CREATE INDEX idx_institutions_state ON institutions(state);
