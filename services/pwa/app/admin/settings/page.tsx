@@ -63,6 +63,8 @@ export default function AdminSettingsPage() {
 
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [generatingQR, setGeneratingQR] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -95,7 +97,7 @@ export default function AdminSettingsPage() {
       }
 
       const userData = await meResponse.json();
-      const instId = userData.institutionId;
+      const instId = userData.institution?.id;
       setInstitutionId(instId);
       setUserName(userData.name || '');
       setUserRole(userData.role || '');
@@ -313,6 +315,52 @@ export default function AdminSettingsPage() {
     fileInputRef.current?.click();
   };
 
+  const handleGenerateQR = async () => {
+    if (!institutionId) return;
+
+    try {
+      setGeneratingQR(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+
+      const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/qr-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'kiosk',
+          size: 512,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate QR code');
+      }
+
+      const result = await response.json();
+      setQrCodeUrl(result.qrCodeUrl);
+
+      // Download the QR code
+      const link = document.createElement('a');
+      link.href = result.qrCodeUrl;
+      link.download = `${settings.urlSlug}-qr-code.png`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      setError('Failed to generate QR code. Please try again.');
+    } finally {
+      setGeneratingQR(false);
+    }
+  };
+
   const formatRole = (role: string) => {
     if (role === 'super_admin') return 'Super Admin';
     if (role === 'admin') return 'Admin';
@@ -514,8 +562,12 @@ export default function AdminSettingsPage() {
                         <h3 className="font-semibold text-gray-900">Generate QR Code</h3>
                         <p className="text-sm text-gray-600">Create a QR code for easy kiosk access</p>
                       </div>
-                      <button className="btn btn-secondary">
-                        Generate QR
+                      <button
+                        onClick={handleGenerateQR}
+                        disabled={generatingQR}
+                        className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {generatingQR ? 'Generating...' : 'Generate QR'}
                       </button>
                     </div>
                   </div>
