@@ -31,6 +31,7 @@ import { generateQRCode, getQRCode } from './handlers/generateQR';
 import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
 import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
+import { getRoutingRules, getRoutingRule, createRoutingRule, updateRoutingRule, deleteRoutingRule, toggleRoutingRule, testRoutingRule } from './handlers/routingRules';
 
 dotenv.config({ path: '.env.local' });
 
@@ -130,6 +131,15 @@ app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
 app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
 app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
 app.post('/api/institutions/:id/admins', jwtAuth, addAdmin);
+
+// Routing rules endpoints (authenticated)
+app.get('/api/institutions/:institutionId/routing-rules', jwtAuth, getRoutingRules);
+app.get('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, getRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules', jwtAuth, createRoutingRule);
+app.patch('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, updateRoutingRule);
+app.delete('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, deleteRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules/:ruleId/toggle', jwtAuth, toggleRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules/test', jwtAuth, testRoutingRule);
 
 // File upload endpoints (authenticated)
 app.post('/api/institutions/:id/logo', jwtAuth, ...uploadLogoHandler);
