@@ -50,8 +50,9 @@ export async function postReport(req: Request, res: Response): Promise<void> {
     }
 
     // Determine tenant ID (use demo tenant if in demo mode or no tenant provided)
+    // Map "demo" string to demo tenant UUID
     let finalTenantId: string;
-    if (demo || !tenant_id) {
+    if (demo || !tenant_id || tenant_id === 'demo') {
       finalTenantId = '00000000-0000-0000-0000-000000000001'; // Demo tenant
     } else {
       finalTenantId = tenant_id;

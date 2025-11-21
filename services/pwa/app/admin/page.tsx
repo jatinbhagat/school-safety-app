@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import AdminNavbar from '@/components/AdminNavbar';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import Link from 'next/link';
 
 interface Incident {
   id: number;
@@ -14,17 +18,60 @@ interface Incident {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
+  const [institutionName, setInstitutionName] = useState<string>('');
+  const [institutionSlug, setInstitutionSlug] = useState<string>('');
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
 
   useEffect(() => {
+    fetchUserAndInstitution();
     fetchIncidents();
   }, []);
+
+  const fetchUserAndInstitution = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Get current user
+      const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!meResponse.ok) {
+        router.push('/login');
+        return;
+      }
+
+      const userData = await meResponse.json();
+      setUserName(userData.name);
+      setUserRole(userData.role);
+
+      // Get institution details
+      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${userData.institutionId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (instResponse.ok) {
+        const instData = await instResponse.json();
+        setInstitutionName(instData.institution_name);
+        setInstitutionSlug(instData.url_slug);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user/institution:', err);
+    }
+  };
 
   const fetchIncidents = async () => {
     try {
@@ -95,27 +142,79 @@ export default function AdminDashboard() {
     return new Date(dateString).toLocaleString();
   };
 
-  if (loading) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.loading}>Loading incidents...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.error}>Error: {error}</div>
-        <button onClick={fetchIncidents} style={styles.retryButton}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div style={styles.container}>
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar
+        institutionName={institutionName}
+        institutionSlug={institutionSlug}
+        userRole={userRole}
+        userName={userName}
+      />
+      <Breadcrumbs />
+
+      {loading ? (
+        <div style={styles.container}>
+          <div style={styles.loading}>Loading dashboard...</div>
+        </div>
+      ) : error ? (
+        <div style={styles.container}>
+          <div style={styles.error}>Error: {error}</div>
+          <button onClick={fetchIncidents} style={styles.retryButton}>
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div style={styles.container}>
+          {/* Quick Action Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Link
+              href="/admin/settings"
+              className="block p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ⚙️
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Settings</h3>
+                  <p className="text-sm text-gray-600">Manage institution</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/admin/reporting-config"
+              className="block p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📝
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Reporting Config</h3>
+                  <p className="text-sm text-gray-600">Customize kiosk</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href={`/kiosk/${institutionSlug || 'demo'}`}
+              target="_blank"
+              className="block p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📱
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">View Kiosk</h3>
+                  <p className="text-sm text-gray-600">Test reporting form</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Existing Dashboard Content */}
       <div style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
         <button
@@ -194,6 +293,8 @@ export default function AdminDashboard() {
 
       {incidents.length === 0 && (
         <div style={styles.emptyState}>No incidents found</div>
+      )}
+        </div>
       )}
     </div>
   );

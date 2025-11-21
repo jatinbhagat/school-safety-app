@@ -2,16 +2,25 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import PasswordInput from '@/components/PasswordInput';
+import StepIndicator from '@/components/StepIndicator';
+import { COUNTRIES, getStatesForCountry, countryRequiresState } from '@/lib/countries';
 
 type InstitutionType = 'school' | 'college' | 'university' | 'corporate' | 'ngo' | '';
 
 interface OnboardingData {
   institutionType: InstitutionType;
   institutionName: string;
-  location: string;
+  country: string;
+  state: string;
+  city: string;
+  location: string; // Legacy field
   email: string;
   contactName: string;
   phone: string;
+  password: string;
+  confirmPassword: string;
   urlSlug: string;
   features: {
     alerts: boolean;
@@ -24,14 +33,20 @@ interface OnboardingData {
 }
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
     institutionType: '',
     institutionName: '',
-    location: '',
+    country: '',
+    state: '',
+    city: '',
+    location: '', // Legacy
     email: '',
     contactName: '',
     phone: '',
+    password: '',
+    confirmPassword: '',
     urlSlug: '',
     features: {
       alerts: true,
@@ -43,7 +58,15 @@ export default function OnboardingPage() {
     acceptedTerms: false,
   });
 
-  const totalSteps = data.institutionType === 'corporate' || data.institutionType === 'ngo' ? 2 : 5;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [institutionId, setInstitutionId] = useState<string | null>(null);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  const totalSteps = data.institutionType === 'corporate' || data.institutionType === 'ngo' ? 2 : 3;
   const isEducational = ['school', 'college', 'university'].includes(data.institutionType);
 
   const updateData = (field: string, value: any) => {
@@ -83,6 +106,207 @@ export default function OnboardingPage() {
       const slug = data.institutionName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       updateData('urlSlug', slug);
     }
+  };
+
+  const handleCompleteOnboarding = async () => {
+    // Clear previous errors
+    setError('');
+    setErrorDetails(null);
+
+    // Client-side validation
+    const validationErrors: string[] = [];
+
+    if (!data.institutionName || data.institutionName.trim().length < 2) {
+      validationErrors.push('Institution name must be at least 2 characters');
+    }
+    if (!data.country) {
+      validationErrors.push('Country is required');
+    }
+    if (countryRequiresState(data.country) && !data.state) {
+      validationErrors.push('State/Province is required for this country');
+    }
+    if (!data.city || data.city.trim().length < 2) {
+      validationErrors.push('City must be at least 2 characters');
+    }
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      validationErrors.push('Valid email address is required');
+    }
+    if (!data.phone || data.phone.replace(/\D/g, '').length < 10) {
+      validationErrors.push('Phone number must be at least 10 digits');
+    }
+    if (!data.contactName || data.contactName.trim().length < 2) {
+      validationErrors.push('Contact name must be at least 2 characters');
+    }
+    if (!data.password || data.password.length < 8) {
+      validationErrors.push('Password must be at least 8 characters');
+    }
+    if (data.password !== data.confirmPassword) {
+      validationErrors.push('Passwords do not match');
+    }
+    if (!data.acceptedTerms) {
+      validationErrors.push('You must accept the terms and conditions');
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('. '));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log('[Frontend] Starting onboarding...');
+
+      // Step 1: Start onboarding (create institution)
+      const startResponse = await fetch(`${API_BASE_URL}/api/onboarding/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          institutionType: data.institutionType,
+          institutionName: data.institutionName,
+          country: data.country,
+          state: data.state || null,
+          city: data.city,
+          email: data.email,
+          contactName: data.contactName,
+          phone: data.phone,
+        }),
+      });
+
+      if (!startResponse.ok) {
+        const errorData = await startResponse.json();
+        console.error('[Frontend] Start onboarding error:', errorData);
+
+        // Handle different error types
+        if (errorData.code === 'DUPLICATE_EMAIL') {
+          setError(
+            `This email is already registered${errorData.details?.existingInstitution ? ` for ${errorData.details.existingInstitution}` : ''}. ` +
+            `Please use a different email or contact support at ${errorData.details?.supportEmail || 'support@safelynotify.com'}`
+          );
+        } else if (errorData.code === 'VALIDATION_ERROR') {
+          // Display field-specific errors
+          if (errorData.details?.errors) {
+            const fieldErrors = errorData.details.errors.map((e: any) =>
+              `${e.field}: ${e.message}`
+            ).join('\n');
+            setError(errorData.message + ':\n' + fieldErrors);
+          } else {
+            setError(errorData.message);
+          }
+          setErrorDetails(errorData.details);
+        } else if (errorData.code === 'DATABASE_ERROR') {
+          setError('Database connection issue. Please check if the backend service is running and try again in a moment.');
+        } else {
+          setError(errorData.message || 'Failed to start onboarding. Please try again.');
+        }
+
+        setErrorDetails(errorData);
+        return;
+      }
+
+      const startData = await startResponse.json();
+      const newInstitutionId = startData.institutionId;
+      setInstitutionId(newInstitutionId);
+
+      console.log(`[Frontend] Institution created: ID=${newInstitutionId}, Slug=${startData.urlSlug}`);
+
+      // Auto-generate slug if not set
+      if (!data.urlSlug && startData.urlSlug) {
+        updateData('urlSlug', startData.urlSlug);
+      }
+
+      // Step 2: Complete onboarding (create admin account and features)
+      const staffEmailsArray = data.staffEmails
+        ? data.staffEmails.split(',').map(email => email.trim()).filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        : [];
+
+      console.log('[Frontend] Completing onboarding...');
+
+      const completeResponse = await fetch(`${API_BASE_URL}/api/onboarding/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          institutionId: newInstitutionId,
+          urlSlug: data.urlSlug || startData.urlSlug,
+          features: data.features,
+          staffEmails: staffEmailsArray,
+          acceptedTerms: data.acceptedTerms,
+          password: data.password,
+        }),
+      });
+
+      if (!completeResponse.ok) {
+        const errorData = await completeResponse.json();
+        console.error('[Frontend] Complete onboarding error:', errorData);
+
+        // Handle different error types
+        if (errorData.code === 'WEAK_PASSWORD') {
+          setError(errorData.message);
+          if (errorData.details?.requirements) {
+            setErrorDetails({
+              requirements: errorData.details.requirements
+            });
+          }
+        } else if (errorData.code === 'DUPLICATE_SLUG') {
+          setError('The URL slug is already taken. Please choose a different one.');
+        } else if (errorData.code === 'VALIDATION_ERROR') {
+          if (errorData.details?.errors) {
+            const fieldErrors = errorData.details.errors.map((e: any) =>
+              `${e.field}: ${e.message}`
+            ).join('\n');
+            setError(errorData.message + ':\n' + fieldErrors);
+          } else {
+            setError(errorData.message);
+          }
+          setErrorDetails(errorData.details);
+        } else if (errorData.code === 'INSTITUTION_NOT_FOUND') {
+          setError('Session expired. Please start the onboarding process again.');
+        } else {
+          setError(errorData.message || 'Failed to complete onboarding. Please try again.');
+        }
+
+        setErrorDetails(errorData);
+        return;
+      }
+
+      const completeData = await completeResponse.json();
+      console.log('[Frontend] Onboarding completed successfully');
+
+      // Store JWT token
+      if (completeData.accessToken) {
+        localStorage.setItem('auth_token', completeData.accessToken);
+      }
+
+      // Move to success step
+      nextStep();
+    } catch (err) {
+      console.error('[Frontend] Onboarding exception:', err);
+
+      // Handle network and other errors
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError(
+          'Cannot connect to the server. Please check:\n' +
+          '1. Is the backend service running on port 3001?\n' +
+          '2. Is your internet connection working?\n' +
+          '3. Is there a firewall blocking the connection?\n\n' +
+          'Try refreshing the page or contact support@safelynotify.com'
+        );
+      } else {
+        setError(
+          (err instanceof Error ? err.message : 'An unexpected error occurred') +
+          '\n\nIf the problem persists, please contact support@safelynotify.com'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setError('');
+    setErrorDetails(null);
+    handleCompleteOnboarding();
   };
 
   return (
@@ -266,15 +490,17 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2: Institution Details (for educational institutions) */}
+        {/* Step 2: Institution Details + Features (for educational institutions) */}
         {step === 2 && isEducational && (
           <div className="animate-fadeIn">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Institution Details</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Set Up Your Institution</h1>
             <p className="text-lg text-gray-600 mb-8">
-              Tell us about your institution so we can set up your SafelyNotify.com account.
+              Tell us about your institution and configure the features you need.
             </p>
 
-            <div className="card">
+            {/* Institution Details */}
+            <div className="card mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Institution Details</h2>
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -283,26 +509,86 @@ export default function OnboardingPage() {
                   <input
                     type="text"
                     value={data.institutionName}
-                    onChange={(e) => updateData('institutionName', e.target.value)}
-                    onBlur={generateSlug}
+                    onChange={(e) => {
+                      updateData('institutionName', e.target.value);
+                      // Auto-generate URL slug as user types
+                      const slug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                      updateData('urlSlug', slug);
+                    }}
                     className="input"
                     placeholder="e.g., Lincoln High School"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Location (City, State/Country) *
-                  </label>
-                  <input
-                    type="text"
-                    value={data.location}
-                    onChange={(e) => updateData('location', e.target.value)}
-                    className="input"
-                    placeholder="e.g., Boston, MA"
-                    required
-                  />
+                {/* Location Fields */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Country *
+                    </label>
+                    <select
+                      value={data.country}
+                      onChange={(e) => {
+                        updateData('country', e.target.value);
+                        updateData('state', ''); // Reset state when country changes
+                      }}
+                      className="input"
+                      required
+                    >
+                      <option value="">Select Country</option>
+                      {COUNTRIES.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {data.country && countryRequiresState(data.country) && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {data.country === 'CA' ? 'Province'
+                          : data.country === 'GB' ? 'Region'
+                          : data.country === 'IN' ? 'State/UT'
+                          : data.country === 'AE' ? 'Emirate'
+                          : data.country === 'ID' ? 'Province'
+                          : 'State'} *
+                      </label>
+                      <select
+                        value={data.state}
+                        onChange={(e) => updateData('state', e.target.value)}
+                        className="input"
+                        required
+                      >
+                        <option value="">Select {data.country === 'CA' ? 'Province'
+                          : data.country === 'GB' ? 'Region'
+                          : data.country === 'IN' ? 'State/UT'
+                          : data.country === 'AE' ? 'Emirate'
+                          : data.country === 'ID' ? 'Province'
+                          : 'State'}</option>
+                        {getStatesForCountry(data.country).map((state) => (
+                          <option key={state.code} value={state.code}>
+                            {state.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={data.city}
+                      onChange={(e) => updateData('city', e.target.value)}
+                      className="input"
+                      placeholder="e.g., Boston"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -348,106 +634,39 @@ export default function OnboardingPage() {
                     required
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={prevStep}
-                className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition-all"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={nextStep}
-                disabled={!data.institutionName || !data.location || !data.email || !data.phone || !data.contactName}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue →
-              </button>
-            </div>
-          </div>
-        )}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <PasswordInput
+                    value={data.password}
+                    onChange={(value) => updateData('password', value)}
+                    label="Create Password"
+                    placeholder="Min 8 characters"
+                    required
+                    showStrength
+                    autoComplete="new-password"
+                  />
 
-        {/* Step 3: URL Slug */}
-        {step === 3 && isEducational && (
-          <div className="animate-fadeIn">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Public URL</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              This will be your institution's unique SafelyNotify.com address. You can change it later.
-            </p>
+                  <PasswordInput
+                    value={data.confirmPassword}
+                    onChange={(value) => updateData('confirmPassword', value)}
+                    label="Confirm Password"
+                    placeholder="Re-enter password"
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
 
-            <div className="card">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    URL Slug *
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={data.urlSlug}
-                      onChange={(e) => updateData('urlSlug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                      className="input"
-                      placeholder="your-institution"
-                      required
-                    />
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Your URL will be: <strong className="text-blue-600">https://{data.urlSlug || 'your-institution'}.safelynotify.com</strong>
+                {data.password && data.confirmPassword && (
+                  <p className={`text-sm ${data.password === data.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    {data.password === data.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
                   </p>
-                </div>
-
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2">Tips for choosing a URL:</h3>
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    <li>• Use your institution's name or abbreviation</li>
-                    <li>• Keep it short and memorable</li>
-                    <li>• Only lowercase letters, numbers, and hyphens allowed</li>
-                    <li>• You can update this later in settings</li>
-                  </ul>
-                </div>
-
-                {data.urlSlug && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-green-700 font-semibold">URL looks good!</span>
-                    </div>
-                  </div>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={prevStep}
-                className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition-all"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={nextStep}
-                disabled={!data.urlSlug || data.urlSlug.length < 3}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Feature Setup */}
-        {step === 4 && isEducational && (
-          <div className="animate-fadeIn">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Configure Features</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Select which features you'd like to enable for your institution.
-            </p>
-
+            {/* Feature Configuration */}
             <div className="card mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Configure Features</h2>
               <div className="space-y-4">
                 <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                   <input
@@ -503,6 +722,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
+            {/* Staff Emails */}
             <div className="card mb-6">
               <h3 className="font-semibold text-gray-900 mb-4">Add Staff Members (Optional)</h3>
               <p className="text-sm text-gray-600 mb-4">Enter email addresses of staff members who should receive access. Separate multiple emails with commas.</p>
@@ -515,6 +735,7 @@ export default function OnboardingPage() {
               />
             </div>
 
+            {/* Terms */}
             <div className="card">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -530,35 +751,91 @@ export default function OnboardingPage() {
               </label>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-red-700 font-semibold">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="p-6 bg-red-50 border-2 border-red-200 rounded-lg mb-6">
+                <div className="flex items-start gap-4">
+                  <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
+                    <p className="text-red-700 whitespace-pre-line">{error}</p>
+
+                    {/* Display password requirements if weak password */}
+                    {errorDetails?.requirements && (
+                      <div className="mt-4 p-3 bg-white rounded border border-red-300">
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Password Requirements:</p>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {errorDetails.requirements.map((req: string, idx: number) => (
+                            <li key={idx}>• {req}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Retry button for network errors */}
+                    {error.includes('Cannot connect') && (
+                      <button
+                        onClick={handleRetry}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all"
+                      >
+                        Retry Connection
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4 mt-8">
               <button
                 onClick={prevStep}
-                className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                disabled={loading}
+                className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← Back
               </button>
               <button
-                onClick={nextStep}
-                disabled={!data.acceptedTerms}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleCompleteOnboarding}
+                disabled={loading || !data.institutionName || !data.country || !data.city || !data.email || !data.phone || !data.contactName || !data.password || !data.confirmPassword || !data.acceptedTerms}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                Complete Onboarding →
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {loading ? 'Creating your account...' : 'Complete Onboarding →'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 5: Success */}
-        {step === 5 && isEducational && (
+        {/* Step 3: Success */}
+        {step === 3 && isEducational && (
           <div className="animate-fadeIn text-center">
             <div className="mb-8">
               <svg className="w-24 h-24 text-green-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Congratulations! 🎉</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to SafelyNotify.com! 🎉</h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              SafelyNotify.com has granted you <strong className="text-green-600">free 1-year access</strong> under the First 100 Program.
+              Your account is ready! You now have <strong className="text-green-600">free 1-year access</strong> to all features under the First 100 Program.
             </p>
 
             <div className="card text-left max-w-2xl mx-auto mb-8">
@@ -567,33 +844,34 @@ export default function OnboardingPage() {
                 <p><strong>Name:</strong> {data.institutionName}</p>
                 <p><strong>Type:</strong> {data.institutionType.charAt(0).toUpperCase() + data.institutionType.slice(1)}</p>
                 <p><strong>Location:</strong> {data.location}</p>
-                <p><strong>Your URL:</strong> <a href={`https://${data.urlSlug}.safelynotify.com`} className="text-blue-600 hover:underline">https://{data.urlSlug}.safelynotify.com</a></p>
+                <p><strong>Email:</strong> {data.email}</p>
+                <p><strong>Kiosk URL:</strong> <Link href={`/kiosk/${data.urlSlug}`} className="text-blue-600 hover:underline">/kiosk/{data.urlSlug}</Link></p>
               </div>
             </div>
 
             <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto mb-8">
-              <h3 className="font-semibold text-gray-900 mb-2">Next Steps:</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Get Started:</h3>
               <ul className="text-sm text-gray-700 text-left space-y-2">
-                <li>✓ Check your email ({data.email}) for verification and login details</li>
-                <li>✓ Complete your admin profile and upload your institution logo</li>
-                <li>✓ Invite staff members and configure permissions</li>
+                <li>✓ Your account is active and ready to use</li>
+                <li>✓ Upload your institution logo in settings</li>
+                <li>✓ Try the interactive demo to see all features</li>
                 <li>✓ Test the incident reporting kiosk</li>
-                <li>✓ Schedule a guided tour of all features</li>
+                <li>✓ Configure staff access and permissions</li>
               </ul>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/admin/settings"
+                href="/admin/demo"
                 className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
               >
-                Go to Admin Dashboard
+                Try the Demo
               </Link>
               <Link
-                href="/"
+                href="/admin/settings"
                 className="px-8 py-4 bg-white text-gray-900 border-2 border-gray-300 rounded-lg font-semibold text-lg hover:border-gray-400 transition-all"
               >
-                Back to Home
+                Go to Settings
               </Link>
             </div>
 

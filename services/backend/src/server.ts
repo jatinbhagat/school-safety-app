@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import path from 'path';
 import * as dotenv from 'dotenv';
 import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
@@ -21,16 +22,18 @@ import { getStaffStats } from './handlers/getStaffStats';
 import { pool } from './db';
 import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
+import { initializeStorage } from './utils/localStorage';
 
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
 import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
-import { verifyEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
+import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
-import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins } from './handlers/institutions';
+import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
 import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
+import { getRoutingRules, getRoutingRule, createRoutingRule, updateRoutingRule, deleteRoutingRule, toggleRoutingRule, testRoutingRule } from './handlers/routingRules';
 
 dotenv.config({ path: '.env.local' });
 
@@ -40,6 +43,10 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from uploads directory
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -114,6 +121,7 @@ app.post('/api/onboarding/complete', completeOnboarding);
 
 // Authentication endpoints (public)
 app.post('/api/auth/verify-email', verifyEmail);
+app.post('/api/auth/check-email', checkEmail);
 app.post('/api/auth/login', login);
 app.post('/api/auth/forgot-password', forgotPassword);
 app.post('/api/auth/reset-password', resetPassword);
@@ -129,6 +137,16 @@ app.get('/api/institutions/:id', jwtAuth, getInstitution);
 app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
 app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
 app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
+app.post('/api/institutions/:id/admins', jwtAuth, addAdmin);
+
+// Routing rules endpoints (authenticated)
+app.get('/api/institutions/:institutionId/routing-rules', jwtAuth, getRoutingRules);
+app.get('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, getRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules', jwtAuth, createRoutingRule);
+app.patch('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, updateRoutingRule);
+app.delete('/api/institutions/:institutionId/routing-rules/:ruleId', jwtAuth, deleteRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules/:ruleId/toggle', jwtAuth, toggleRoutingRule);
+app.post('/api/institutions/:institutionId/routing-rules/test', jwtAuth, testRoutingRule);
 
 // File upload endpoints (authenticated)
 app.post('/api/institutions/:id/logo', jwtAuth, ...uploadLogoHandler);
@@ -161,6 +179,13 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// Initialize storage on startup
+initializeStorage().then(() => {
+  console.log('✅ Storage initialized');
+}).catch(err => {
+  console.error('❌ Failed to initialize storage:', err);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 School Safety Backend running on port ${PORT}`);
@@ -168,6 +193,7 @@ app.listen(PORT, () => {
   console.log(`📝 Report endpoint: http://localhost:${PORT}/report`);
   console.log(`📋 Incidents list: http://localhost:${PORT}/incidents`);
   console.log(`✅ Assign incident: POST http://localhost:${PORT}/incidents/:id/assign`);
+  console.log(`📁 Uploads directory: ${uploadsDir}`);
 });
 
 // Graceful shutdown

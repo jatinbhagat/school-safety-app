@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: school_safety_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data
+    ports:
+      - "9000:9000"
+    volumes:
+      - miniodata:/data
+
+  localstack:
+    image: localstack/localstack
+    environment:
+      - SERVICES=s3,sqs,lambda,iam,secretsmanager
+      - DEBUG=1
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    volumes:
+      - ./localstack:/tmp/localstack
+volumes:
+  pgdata:
+  miniodata:
