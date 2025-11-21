@@ -171,6 +171,64 @@ app.get('/api/reporting/fields/catalog', getFieldsCatalog);
 // Add field to catalog (admin only)
 app.post('/api/reporting/fields/catalog', jwtAuth, addFieldToCatalog);
 
+// Temporary migration endpoint (remove after deployment)
+app.get('/admin/run-migrations', async (_req: Request, res: Response) => {
+  try {
+    const { spawn } = await import('child_process');
+    
+    // Run migrations using the migrate.ts script
+    const process = spawn('npm', ['run', 'migrate'], {
+      cwd: __dirname + '/..',
+      stdio: 'pipe'
+    });
+    
+    let output = '';
+    let errorOutput = '';
+    
+    process.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+    
+    process.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    
+    process.on('close', (code) => {
+      if (code === 0) {
+        res.json({
+          status: 'success',
+          message: 'Migrations completed successfully',
+          output: output
+        });
+      } else {
+        res.status(500).json({
+          status: 'error',
+          message: 'Migration failed',
+          output: output,
+          error: errorOutput
+        });
+      }
+    });
+    
+    // Timeout after 2 minutes
+    setTimeout(() => {
+      process.kill();
+      res.status(408).json({
+        status: 'timeout',
+        message: 'Migration timed out after 2 minutes'
+      });
+    }, 120000);
+    
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to run migrations',
+      error: error
+    });
+  }
+});
+
 // 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
