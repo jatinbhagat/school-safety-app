@@ -25,15 +25,16 @@ jobs:
 
       - name: npm install, build, and test
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          cd services/backend
+          npm ci
+          npm run build
+          npm run test
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: services/backend
 
   deploy:
     runs-on: ubuntu-latest
@@ -62,4 +63,5 @@ jobs:
           app-name: 'safelynotify'
           slot-name: 'Production'
           package: .
+          startup-command: 'node dist/server.js'
           
