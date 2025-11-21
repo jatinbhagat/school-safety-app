@@ -146,6 +146,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50">
       <AdminNavbar
         institutionName={institutionName}
+        institutionSlug={institutionSlug}
         userRole={userRole}
         userName={userName}
       />

@@ -27,7 +27,7 @@ import { initializeStorage } from './utils/localStorage';
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
 import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
-import { verifyEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
+import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
 import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
@@ -121,6 +121,7 @@ app.post('/api/onboarding/complete', completeOnboarding);
 
 // Authentication endpoints (public)
 app.post('/api/auth/verify-email', verifyEmail);
+app.post('/api/auth/check-email', checkEmail);
 app.post('/api/auth/login', login);
 app.post('/api/auth/forgot-password', forgotPassword);
 app.post('/api/auth/reset-password', resetPassword);

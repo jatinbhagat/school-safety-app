@@ -98,6 +98,54 @@ export async function verifyEmail(req: Request, res: Response) {
 }
 
 /**
+ * POST /api/auth/check-email
+ * Check if email exists and return institution info
+ */
+export async function checkEmail(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Email is required',
+        message: 'Please provide an email address',
+      });
+    }
+
+    // Find admin with this email
+    const result = await pool.query(
+      `SELECT a.id, a.email, i.institution_name, i.logo_url, i.is_active
+       FROM institution_admins a
+       JOIN institutions i ON i.id = a.institution_id
+       WHERE a.email = $1 AND a.is_active = true`,
+      [email.toLowerCase().trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Email not found',
+        message: 'No account found with this email address',
+      });
+    }
+
+    const admin = result.rows[0];
+
+    res.json({
+      exists: true,
+      institutionName: admin.institution_name,
+      institutionLogo: admin.logo_url,
+      isActive: admin.is_active,
+    });
+  } catch (error) {
+    console.error('Check email error:', error);
+    res.status(500).json({
+      error: 'Failed to check email',
+      message: 'An error occurred while checking the email',
+    });
+  }
+}
+
+/**
  * POST /api/auth/login
  * Login with email and password
  */
