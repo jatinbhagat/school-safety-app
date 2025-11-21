@@ -8,19 +8,30 @@ import DemoBanner from '@/components/DemoBanner';
 
 interface Category {
   id: string;
-  label: string;
-  color: string;
+  name: string;
+  description?: string;
+  order: number;
+  color?: string;
 }
 
-const CATEGORIES: Category[] = [
-  { id: 'bullying', label: 'Bullying', color: '#EF4444' },
-  { id: 'harassment', label: 'Harassment', color: '#F59E0B' },
-  { id: 'cyberbullying', label: 'Cyberbullying', color: '#8B5CF6' },
-  { id: 'physical', label: 'Physical', color: '#DC2626' },
-  { id: 'mental_stress', label: 'Mental Stress', color: '#06B6D4' },
-  { id: 'academic_pressure', label: 'Academic Pressure', color: '#10B981' },
-  { id: 'cheating', label: 'Cheating', color: '#F97316' },
-  { id: 'general', label: 'General', color: '#6B7280' },
+interface CategoryConfig {
+  id: string;
+  name: string;
+  description?: string;
+  order: number;
+  fields: any[];
+}
+
+interface TenantConfig {
+  categories: CategoryConfig[];
+  settings?: any;
+}
+
+// Default color palette for categories
+const DEFAULT_COLORS = [
+  '#EF4444', '#F59E0B', '#8B5CF6', '#DC2626',
+  '#06B6D4', '#10B981', '#F97316', '#6B7280',
+  '#EC4899', '#14B8A6', '#F59E0B', '#8B5CF6'
 ];
 
 export default function KioskPage({ params }: { params: { slug: string } }) {
@@ -33,6 +44,10 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
   const [simulatedOffline, setSimulatedOffline] = useState(false);
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [institutionInfo, setInstitutionInfo] = useState<any>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -45,6 +60,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
     // Check if user is admin
     checkAdminStatus();
+
+    // Fetch institution and reporting config
+    fetchInstitutionAndConfig();
 
     // Monitor online/offline status
     const handleOnline = () => setIsOnline(true);
@@ -61,6 +79,45 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const fetchInstitutionAndConfig = async () => {
+    try {
+      // Fetch institution by slug
+      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/by-slug/${params.slug}`);
+      if (!instResponse.ok) {
+        console.error('Failed to fetch institution');
+        setLoading(false);
+        return;
+      }
+
+      const instData = await instResponse.json();
+      setInstitutionInfo(instData);
+
+      // Fetch reporting config using tenant_id
+      const tenantId = instData.tenant_id || 'demo';
+      const configResponse = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
+
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
+        setTenantConfig(configData.config);
+
+        // Map categories with default colors
+        const cats = configData.config.categories.map((cat: CategoryConfig, index: number) => ({
+          id: cat.id,
+          name: cat.name,
+          description: cat.description,
+          order: cat.order,
+          color: DEFAULT_COLORS[index % DEFAULT_COLORS.length]
+        }));
+
+        setCategories(cats.sort((a: Category, b: Category) => a.order - b.order));
+      }
+    } catch (error) {
+      console.error('Failed to fetch config:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkAdminStatus = async () => {
     try {
@@ -174,6 +231,28 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{ ...styles.container, justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+          <p style={{ fontSize: '18px', color: '#666' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div style={{ ...styles.container, justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+          <p style={{ fontSize: '18px', color: '#666' }}>No reporting categories configured</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       {/* Demo Banner */}
@@ -181,7 +260,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
       {/* Header */}
       <div style={styles.header}>
-        <h1 style={styles.title}>School Safety Reporting</h1>
+        <h1 style={styles.title}>{institutionInfo?.institution_name || 'School Safety Reporting'}</h1>
         <p style={styles.subtitle}>{params.slug}</p>
         <div style={styles.statusBadge}>
           <span
@@ -228,7 +307,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
       {/* Category Grid */}
       <div style={styles.grid}>
-        {CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <button
             key={category.id}
             style={{
@@ -236,8 +315,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
               backgroundColor: category.color,
             }}
             onClick={() => handleCategoryClick(category.id)}
+            title={category.description}
           >
-            {category.label}
+            {category.name}
           </button>
         ))}
       </div>
@@ -264,7 +344,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
             ) : (
               <>
                 <h2 style={styles.modalTitle}>
-                  {CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+                  {categories.find((c) => c.id === selectedCategory)?.name}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
