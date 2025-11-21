@@ -174,57 +174,105 @@ app.post('/api/reporting/fields/catalog', jwtAuth, addFieldToCatalog);
 // Temporary migration endpoint (remove after deployment)
 app.get('/admin/run-migrations', async (_req: Request, res: Response) => {
   try {
-    const { spawn } = await import('child_process');
+    console.log('🚀 Starting database migrations...');
     
-    // Run migrations using the migrate.ts script
-    const process = spawn('npm', ['run', 'migrate'], {
-      cwd: __dirname + '/..',
-      stdio: 'pipe'
-    });
+    // Test database connection
+    console.log('📡 Testing database connection...');
+    await pool.query('SELECT NOW()');
+    console.log('✅ Database connection successful');
+
+    // Create migrations table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id SERIAL PRIMARY KEY,
+        filename TEXT NOT NULL UNIQUE,
+        executed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Get list of migration files
+    const fs = await import('fs');
+    const path = await import('path');
     
-    let output = '';
-    let errorOutput = '';
-    
-    process.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-    
-    process.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-    
-    process.on('close', (code) => {
-      if (code === 0) {
-        res.json({
-          status: 'success',
-          message: 'Migrations completed successfully',
-          output: output
-        });
-      } else {
+    const migrationsDir = path.join(__dirname, '../migrations');
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    console.log(`📁 Found ${files.length} migration files`);
+
+    let executed = 0;
+    let skipped = 0;
+    const results = [];
+
+    for (const file of files) {
+      try {
+        // Check if migration already executed
+        const existingResult = await pool.query(
+          'SELECT filename FROM migrations WHERE filename = $1',
+          [file]
+        );
+
+        if (existingResult.rows.length > 0) {
+          console.log(`⏭️  Skipping ${file} (already executed)`);
+          skipped++;
+          results.push(`⏭️  Skipped: ${file} (already executed)`);
+          continue;
+        }
+
+        // Read and execute migration
+        const filePath = path.join(migrationsDir, file);
+        const sql = fs.readFileSync(filePath, 'utf8');
+        
+        console.log(`🔄 Executing migration: ${file}`);
+        
+        // Execute the migration in a transaction
+        await pool.query('BEGIN');
+        await pool.query(sql);
+        await pool.query(
+          'INSERT INTO migrations (filename) VALUES ($1)',
+          [file]
+        );
+        await pool.query('COMMIT');
+        
+        console.log(`✅ Successfully executed: ${file}`);
+        executed++;
+        results.push(`✅ Executed: ${file}`);
+        
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        console.error(`❌ Migration failed: ${file}`, error);
+        
         res.status(500).json({
           status: 'error',
-          message: 'Migration failed',
-          output: output,
-          error: errorOutput
+          message: `Migration failed at ${file}`,
+          error: error instanceof Error ? error.message : String(error),
+          results: results
         });
+        return;
       }
+    }
+
+    const summary = `✅ Migrations completed! Executed: ${executed}, Skipped: ${skipped}`;
+    console.log(summary);
+    
+    res.json({
+      status: 'success',
+      message: summary,
+      details: {
+        executed: executed,
+        skipped: skipped,
+        total: files.length
+      },
+      results: results
     });
-    
-    // Timeout after 2 minutes
-    setTimeout(() => {
-      process.kill();
-      res.status(408).json({
-        status: 'timeout',
-        message: 'Migration timed out after 2 minutes'
-      });
-    }, 120000);
-    
+
   } catch (error) {
     console.error('Migration error:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to run migrations',
-      error: error
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
