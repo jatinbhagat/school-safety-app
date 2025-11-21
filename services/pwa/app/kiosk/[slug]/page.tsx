@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 import { offlineQueue, Report } from '@/lib/offline';
 import { isDemoMode, simulateOfflineMode, isSimulatedOffline, getDemoImages } from '@/lib/demo';
 import DemoBanner from '@/components/DemoBanner';
@@ -484,6 +485,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
 
       {/* Header */}
       <div style={styles.header}>
+        <div style={styles.logoContainer}>
+          <Logo size="md" />
+        </div>
         <h1 style={styles.title}>{institutionInfo?.institution_name || 'School Safety Reporting'}</h1>
         <p style={styles.subtitle}>{params.slug}</p>
         <div style={styles.statusBadge}>
@@ -682,6 +686,11 @@ const styles = {
   header: {
     textAlign: 'center' as const,
     marginBottom: '3.5rem',
+  } as React.CSSProperties,
+  logoContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '1.5rem',
   } as React.CSSProperties,
   title: {
     fontSize: '2.75rem',

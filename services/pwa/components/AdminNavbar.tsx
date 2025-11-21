@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import Logo from './Logo';
 
 interface AdminNavbarProps {
   institutionName?: string;
@@ -62,14 +63,12 @@ export default function AdminNavbar({ institutionName, institutionSlug, userRole
           {/* Logo / Brand */}
           <div className="flex items-center">
             <Link href="/admin" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow">
-                S
-              </div>
+              <Logo size="md" />
               <div className="hidden md:block">
                 <div className="text-lg font-bold text-gray-900">
-                  {institutionName || 'SafelyNotify'}
+                  {institutionName || 'Admin Portal'}
                 </div>
-                <div className="text-xs text-gray-500">Admin Portal</div>
+                <div className="text-xs text-gray-500">Dashboard</div>
               </div>
             </Link>
           </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PasswordInput from '@/components/PasswordInput';
 import StepIndicator from '@/components/StepIndicator';
+import Logo from '@/components/Logo';
 import { COUNTRIES, getStatesForCountry, countryRequiresState } from '@/lib/countries';
 
 type InstitutionType = 'school' | 'college' | 'university' | 'corporate' | 'ngo' | '';
@@ -315,7 +316,9 @@ export default function OnboardingPage() {
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-blue-600">SafelyNotify.com</Link>
+            <Link href="/" className="flex items-center">
+              <Logo size="lg" />
+            </Link>
             <Link href="/" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
               ← Back to Home
             </Link>
