@@ -18,6 +18,7 @@ export default function AdminNavbar({ institutionName, userRole, userName }: Adm
 
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: '📊' },
+    { href: '/admin/routing-rules', label: 'Routing Rules', icon: '🎯' },
     { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
     { href: '/admin/reporting-config', label: 'Reporting Config', icon: '📝' },
     { href: '/admin/guides', label: 'Guides', icon: '📚' },
