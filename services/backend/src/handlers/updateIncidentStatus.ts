@@ -93,7 +93,7 @@ export async function updateIncidentStatus(req: Request, res: Response) {
         eventDescription,
         JSON.stringify({ old_status: oldStatus, new_status: status, notes }),
         adminName,
-        req.role || 'admin',
+        req.admin?.role || 'admin',
         adminEmail,
         'admin',
       ]);
