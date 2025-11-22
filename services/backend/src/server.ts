@@ -35,6 +35,19 @@ import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
 import { getRoutingRules, getRoutingRule, createRoutingRule, updateRoutingRule, deleteRoutingRule, toggleRoutingRule, testRoutingRule } from './handlers/routingRules';
 
+// Phase 2 - New incident management and false reporting imports
+import { getAdminIncidentDetail } from './handlers/getAdminIncidentDetail';
+import { updateIncidentStatus } from './handlers/updateIncidentStatus';
+import { flagFalseReport } from './handlers/flagFalseReport';
+import { confirmFalseReport } from './handlers/confirmFalseReport';
+import { restoreFalseReport } from './handlers/restoreFalseReport';
+import { getReporterHistory } from './handlers/getReporterHistory';
+import { blockReporter, unblockReporter } from './handlers/blockReporter';
+
+// Phase 4 - Anonymous tracking portal
+import { getTrackingData } from './handlers/getTrackingData';
+import { submitDispute } from './handlers/submitDispute';
+
 dotenv.config({ path: '.env.local' });
 
 const app = express();
@@ -97,6 +110,24 @@ app.get('/staff/stats', staffAuth, getStaffStats);
 // SECURE: Admin incidents endpoint with proper JWT authentication and tenant isolation
 app.get('/api/admin/incidents', jwtAuth, getAdminIncidents);
 app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
+
+// Phase 2 - Enhanced incident management endpoints (JWT authenticated)
+app.get('/api/admin/incidents/:id', jwtAuth, getAdminIncidentDetail);
+app.put('/api/admin/incidents/:id/status', jwtAuth, updateIncidentStatus);
+
+// False reporting endpoints (admin and super_admin only)
+app.post('/api/admin/incidents/:id/flag-false', jwtAuth, flagFalseReport);
+app.post('/api/admin/incidents/:id/confirm-false', jwtAuth, confirmFalseReport); // Super admin only
+app.post('/api/admin/incidents/:id/restore', jwtAuth, restoreFalseReport); // Super admin only
+
+// Reporter management endpoints (admin and super_admin only)
+app.get('/api/admin/reporter-history/:fingerprint', jwtAuth, getReporterHistory);
+app.post('/api/admin/block-reporter', jwtAuth, blockReporter);
+app.post('/api/admin/unblock-reporter', jwtAuth, unblockReporter);
+
+// Anonymous tracking portal (public - no authentication)
+app.get('/api/track/:token', getTrackingData);
+app.post('/api/dispute/:token', submitDispute);
 
 // DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
 app.get('/admin/incidents', adminAuth, getIncidents);

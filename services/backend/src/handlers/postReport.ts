@@ -3,7 +3,8 @@ import { pool } from '../db';
 import { randomUUID } from 'crypto';
 import crypto from 'crypto';
 import { validateDynamicFields, checkHasPII, getFieldDefinitions } from '../utils/reportingValidation';
-import { encryptDynamicPIIFields } from '../utils/piiEncryption';
+import { encryptDynamicPIIFields, encryptPII } from '../utils/piiEncryption';
+import { reporterNotificationService } from '../services/reporterNotifications';
 
 interface AttachmentMetadata {
   key: string;
@@ -133,6 +134,40 @@ export async function postReport(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // Extract reporter contact info from dynamic fields
+    let reporterEmail: string | null = null;
+    let reporterPhone: string | null = null;
+    let notificationPreference = 'both'; // default
+
+    if (finalDynamicFields) {
+      // Check for email field
+      if (finalDynamicFields.contact_email && typeof finalDynamicFields.contact_email === 'string') {
+        reporterEmail = encryptPII(finalDynamicFields.contact_email);
+      }
+
+      // Check for phone field
+      if (finalDynamicFields.contact_phone && typeof finalDynamicFields.contact_phone === 'string') {
+        reporterPhone = encryptPII(finalDynamicFields.contact_phone);
+      }
+
+      // Determine preference
+      if (reporterEmail && !reporterPhone) {
+        notificationPreference = 'email';
+      } else if (reporterPhone && !reporterEmail) {
+        notificationPreference = 'sms';
+      } else if (!reporterEmail && !reporterPhone) {
+        notificationPreference = 'none';
+      }
+    }
+
+    // Generate reporter fingerprint (for spam detection)
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+    const fingerprint = crypto
+      .createHash('sha256')
+      .update(`${ipAddress}:${userAgent}`)
+      .digest('hex');
+
     // Insert incident into database
     const query = `
       INSERT INTO incidents (
@@ -143,9 +178,13 @@ export async function postReport(req: Request, res: Response): Promise<void> {
         status,
         tenant_id,
         dynamic_fields,
-        has_pii
+        has_pii,
+        reporter_contact_email,
+        reporter_contact_phone,
+        reporter_notification_preference,
+        reporter_fingerprint
       )
-      VALUES ($1, $2, $3, $4, 'open', $5, $6, $7)
+      VALUES ($1, $2, $3, $4, 'open', $5, $6, $7, $8, $9, $10, $11)
       RETURNING id, created_at
     `;
 
@@ -157,10 +196,41 @@ export async function postReport(req: Request, res: Response): Promise<void> {
       finalTenantId,
       finalDynamicFields ? JSON.stringify(finalDynamicFields) : null,
       hasPII,
+      reporterEmail,
+      reporterPhone,
+      notificationPreference,
+      fingerprint,
     ];
 
     const result = await pool.query(query, values);
     const incident = result.rows[0];
+
+    // Update or create reporter reputation
+    if (fingerprint) {
+      await pool.query(
+        `INSERT INTO reporter_reputation (
+          reporter_fingerprint,
+          institution_id,
+          total_reports,
+          first_report_at,
+          last_report_at
+        )
+        VALUES ($1, (SELECT id FROM institutions WHERE uuid = $2 LIMIT 1), 1, NOW(), NOW())
+        ON CONFLICT (reporter_fingerprint, institution_id)
+        DO UPDATE SET
+          total_reports = reporter_reputation.total_reports + 1,
+          last_report_at = NOW(),
+          updated_at = NOW()`,
+        [fingerprint, finalTenantId]
+      );
+    }
+
+    // Send confirmation notification (async, don't wait)
+    if (reporterEmail || reporterPhone) {
+      reporterNotificationService
+        .sendNotification(incident.id, 'report_received')
+        .catch((error) => console.error('Failed to send confirmation notification:', error));
+    }
 
     // Audit log: record submission with field keys (not values)
     const ipHash = req.headers['x-forwarded-for']
