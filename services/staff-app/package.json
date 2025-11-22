@@ -9,14 +9,18 @@
     "web": "npx expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-navigation/native": "^6.1.7",
+    "@react-navigation/native-stack": "^6.9.13",
     "expo": "~54.0.0",
+    "expo-constants": "^18.0.10",
+    "expo-device": "^8.0.9",
+    "expo-notifications": "^0.32.13",
     "expo-status-bar": "~2.0.0",
     "react": "19.1.0",
     "react-native": "0.81.2",
-    "@react-navigation/native": "^6.1.7",
-    "@react-navigation/native-stack": "^6.9.13",
-    "react-native-screens": "~4.5.0",
-    "react-native-safe-area-context": "~5.1.0"
+    "react-native-safe-area-context": "~5.1.0",
+    "react-native-screens": "~4.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
