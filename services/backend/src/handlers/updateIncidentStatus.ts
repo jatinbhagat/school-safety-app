@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { pool } from '../db';
 import { AuthRequest } from '../middleware/jwtAuth';
+import { reporterNotificationService } from '../services/reporterNotifications';
 
 /**
  * PUT /api/admin/incidents/:id/status
@@ -99,6 +100,20 @@ export async function updateIncidentStatus(req: AuthRequest, res: Response) {
       ]);
 
       await client.query('COMMIT');
+
+      // Send notification to reporter (async, don't wait)
+      let notificationType: 'status_changed' | 'resolved' | 'closed' | 'assigned_to_staff' = 'status_changed';
+      if (status === 'resolved') {
+        notificationType = 'resolved';
+      } else if (status === 'closed') {
+        notificationType = 'closed';
+      } else if (status === 'in_progress') {
+        notificationType = 'assigned_to_staff';
+      }
+
+      reporterNotificationService
+        .sendNotification(incidentId, notificationType)
+        .catch((error) => console.error('Failed to send status notification:', error));
 
       res.status(200).json({
         message: 'Status updated successfully',

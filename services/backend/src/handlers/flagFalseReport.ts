@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { pool } from '../db';
 import { AuthRequest } from '../middleware/jwtAuth';
+import { reporterNotificationService } from '../services/reporterNotifications';
 
 /**
  * POST /api/admin/incidents/:id/flag-false
@@ -120,8 +121,20 @@ export async function flagFalseReport(req: AuthRequest, res: Response) {
 
       await client.query('COMMIT');
 
-      // TODO: Send notification to reporter if contact info provided
-      // This will be implemented in Phase 3
+      // Send notification to reporter if contact info provided
+      const baseUrl = process.env.FRONTEND_URL || 'https://safelynotify.com';
+      const trackingToken = updateResult.rows[0].reporter_notification_token;
+      const disputeUrl = trackingToken ? `${baseUrl}/dispute/${trackingToken}` : baseUrl;
+      const disputeDeadline = new Date();
+      disputeDeadline.setDate(disputeDeadline.getDate() + 7);
+
+      reporterNotificationService
+        .sendNotification(incidentId, 'flagged_as_false', {
+          flag_reason: reason,
+          dispute_url: disputeUrl,
+          dispute_deadline: disputeDeadline.toLocaleDateString(),
+        })
+        .catch((error) => console.error('Failed to send false report notification:', error));
 
       res.status(200).json({
         message: 'Incident flagged as false report',
