@@ -4,9 +4,9 @@ import path from 'path';
 import * as dotenv from 'dotenv';
 import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
-import { getIncidents } from './handlers/getIncidents';
+import { getIncidents, getAdminIncidents } from './handlers/getIncidents';
 import { assignIncident } from './handlers/assignIncident';
-import { exportIncidents } from './handlers/exportIncidents';
+import { exportIncidents, exportAdminIncidents } from './handlers/exportIncidents';
 import { getHeatmap } from './handlers/getHeatmap';
 import { getSafetyScore } from './handlers/getSafetyScore';
 import { triageRoute } from './handlers/triageRoute';
@@ -27,7 +27,7 @@ import { initializeStorage } from './utils/localStorage';
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
 import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
-import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser } from './handlers/auth';
+import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser, updateProfile } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
 import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
@@ -94,6 +94,11 @@ app.post('/staff/incidents/:id/resolve', staffAuth, resolveIncident);
 app.get('/staff/stats', staffAuth, getStaffStats);
 
 // Admin endpoints (protected by admin token)
+// SECURE: Admin incidents endpoint with proper JWT authentication and tenant isolation
+app.get('/api/admin/incidents', jwtAuth, getAdminIncidents);
+app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
+
+// DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
 app.get('/admin/incidents', adminAuth, getIncidents);
 app.get('/admin/export', adminAuth, exportIncidents);
 app.get('/admin/safety-score', adminAuth, getSafetyScore);
@@ -126,6 +131,7 @@ app.post('/api/auth/login', login);
 app.post('/api/auth/forgot-password', forgotPassword);
 app.post('/api/auth/reset-password', resetPassword);
 app.get('/api/auth/me', jwtAuth, getCurrentUser);
+app.patch('/api/auth/profile', jwtAuth, updateProfile);
 
 // Demo booking endpoints
 app.post('/api/demo/request', submitDemoRequest);

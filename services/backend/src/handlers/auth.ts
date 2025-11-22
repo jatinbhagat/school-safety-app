@@ -392,3 +392,133 @@ export async function getCurrentUser(req: Request, res: Response) {
     res.status(500).json({ error: 'Failed to get user info' });
   }
 }
+
+/**
+ * PATCH /api/auth/profile
+ * Update current user's profile
+ */
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { name, phone, currentPassword, newPassword } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const adminId = req.admin.adminId;
+    let updateFields = [];
+    let updateValues = [];
+    let paramCount = 1;
+
+    // Update name and phone
+    updateFields.push(`name = $${paramCount++}`);
+    updateValues.push(name);
+
+    if (phone !== undefined) {
+      updateFields.push(`phone = $${paramCount++}`);
+      updateValues.push(phone || null);
+    }
+
+    // Handle password update if provided
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+
+      // Validate new password
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.message });
+      }
+
+      // Get current password hash to verify
+      const adminResult = await pool.query(
+        'SELECT password_hash FROM institution_admins WHERE id = $1',
+        [adminId]
+      );
+
+      if (adminResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Admin not found' });
+      }
+
+      const admin = adminResult.rows[0];
+
+      // Verify current password
+      const isCurrentPasswordValid = await comparePassword(currentPassword, admin.password_hash);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+      updateFields.push(`password_hash = $${paramCount++}`);
+      updateValues.push(newPasswordHash);
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    updateValues.push(adminId);
+
+    // Update the admin
+    const updateQuery = `
+      UPDATE institution_admins 
+      SET ${updateFields.join(', ')} 
+      WHERE id = $${paramCount}
+      RETURNING id, name, email, phone, role, email_verified, last_login_at, created_at, institution_id
+    `;
+
+    const updateResult = await pool.query(updateQuery, updateValues);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    const updatedAdmin = updateResult.rows[0];
+
+    // Get institution details
+    const instResult = await pool.query(
+      `SELECT institution_name, url_slug, logo_url, brand_color 
+       FROM institutions WHERE id = $1`,
+      [updatedAdmin.institution_id]
+    );
+
+    const institution = instResult.rows[0];
+
+    // Create audit log for profile update
+    await pool.query(
+      `INSERT INTO audit_logs (institution_id, admin_id, action, entity_type, entity_id, new_values)
+       VALUES ($1, $2, 'update_profile', 'admin', $3, $4)`,
+      [
+        updatedAdmin.institution_id,
+        adminId,
+        adminId,
+        JSON.stringify({ name, phone, passwordChanged: !!newPassword })
+      ]
+    );
+
+    res.json({
+      success: true,
+      id: updatedAdmin.id,
+      name: updatedAdmin.name,
+      email: updatedAdmin.email,
+      phone: updatedAdmin.phone,
+      role: updatedAdmin.role,
+      email_verified: updatedAdmin.email_verified,
+      last_login_at: updatedAdmin.last_login_at,
+      created_at: updatedAdmin.created_at,
+      institution: {
+        id: updatedAdmin.institution_id,
+        institution_name: institution?.institution_name,
+        url_slug: institution?.url_slug,
+        logo_url: institution?.logo_url,
+        brand_color: institution?.brand_color,
+      },
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+}

@@ -65,7 +65,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#2563eb" />
       </head>
-      <body>
+      <body suppressHydrationWarning={true}>
         {children}
       </body>
     </html>

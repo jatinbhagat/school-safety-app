@@ -597,25 +597,30 @@ export async function completeOnboarding(req: Request, res: Response) {
         console.log(`[Onboarding] Created tenant config for tenant_id: ${institution.tenant_id}`);
       }
 
-      // Copy default routing rules for this institution
-      const defaultRulesResult = await client.query(
-        `SELECT keyword, staff_role, priority_boost, rule_type
-         FROM routing_rules
-         WHERE institution_id IS NULL OR institution_id = 0
-         LIMIT 20`
+      // Copy default routing rules for this institution using the database function
+      const copyRulesResult = await client.query(
+        `SELECT copy_default_routing_rules_for_institution($1) as rules_copied`,
+        [institutionId]
       );
-
-      if (defaultRulesResult.rows.length > 0) {
-        for (const rule of defaultRulesResult.rows) {
-          await client.query(
-            `INSERT INTO routing_rules (
-              institution_id, keyword, staff_role, priority_boost, rule_type, is_active
-            ) VALUES ($1, $2, $3, $4, $5, true)
-            ON CONFLICT (institution_id, keyword, staff_role) DO NOTHING`,
-            [institutionId, rule.keyword, rule.staff_role, rule.priority_boost, rule.rule_type]
-          );
-        }
-        console.log(`[Onboarding] Copied ${defaultRulesResult.rows.length} default routing rules`);
+      
+      const rulesCopied = copyRulesResult.rows[0]?.rules_copied || 0;
+      console.log(`[Onboarding] Copied ${rulesCopied} default routing rules`);
+      
+      if (rulesCopied === 0) {
+        // Fallback: If no rules exist, create a basic default rule
+        await client.query(
+          `INSERT INTO routing_rules (
+            rule_id, name, description, priority, target_role, routing_priority, 
+            confidence, estimated_response_time, condition_config, institution_id, 
+            is_active, created_by
+          ) VALUES (
+            $1, 'Default General Rule', 'Basic routing for all incidents',
+            10, 'administrator', 'medium', 0.75, '< 4 hours',
+            '{"default": true}', $2, true, 'system'
+          ) ON CONFLICT (rule_id) DO NOTHING`,
+          [`default_inst_${institutionId}`, institutionId]
+        );
+        console.log(`[Onboarding] Created fallback default rule for institution ${institutionId}`);
       }
 
       // Create staff members if provided

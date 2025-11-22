@@ -95,13 +95,15 @@ export default function HomePage() {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
             Anonymous Incident Reporting<br />
             <span className="text-blue-600">Platform for Schools, Colleges & Institutions</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Smart, Secure & Instant Safety for Every Institution. Students report anonymously, AI routes intelligently, staff respond immediately. <span className="font-semibold text-blue-600">85-90% AI accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
+          <p className="text-base md:text-lg text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Smart, secure & instant safety for every institution.<br />
+            Students report anonymously → AI routes intelligently → Staff respond immediately.<br />
+            <span className="font-semibold text-blue-600">85-90% AI accuracy</span> • <span className="font-semibold text-green-600">70% less admin work</span>
           </p>
 
           {/* Hero Statistics */}
