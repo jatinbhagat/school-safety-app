@@ -1,0 +1,28 @@
+# SafelyNotify - Anonymous Incident Reporting Platform for Schools, Colleges & Institutions
+# https://safelynotify.com
+
+User-agent: *
+Allow: /
+
+# Important pages for crawling
+Allow: /features
+Allow: /onboarding
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+
+# Disallow admin areas and sensitive paths
+Disallow: /admin/
+Disallow: /api/
+Disallow: /kiosk/
+Disallow: /_next/
+Disallow: /uploads/
+
+# Allow specific public admin demo pages for SEO
+Allow: /admin/demo
+
+# Sitemap location
+Sitemap: https://safelynotify.com/sitemap.xml
+
+# Crawl-delay for good citizenship (optional)
+Crawl-delay: 1
