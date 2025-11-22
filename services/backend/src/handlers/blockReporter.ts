@@ -1,19 +1,18 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../db';
-import { AuthRequest } from '../middleware/jwtAuth';
 
 /**
  * POST /api/admin/block-reporter
  * Block a reporter by fingerprint
  * Requires admin or super_admin role
  */
-export async function blockReporter(req: AuthRequest, res: Response) {
+export async function blockReporter(req: Request, res: Response) {
   try {
     const { fingerprint, reason } = req.body;
-    const institutionId = req.institutionId;
-    const adminId = req.adminId;
-    const adminEmail = req.email;
-    const role = req.role;
+    const institutionId = req.admin?.institutionId;
+    const adminId = req.admin?.adminId;
+    const adminEmail = req.admin?.email;
+    const role = req.admin?.role;
 
     if (!fingerprint) {
       return res.status(400).json({
@@ -141,13 +140,13 @@ export async function blockReporter(req: AuthRequest, res: Response) {
  * Unblock a reporter
  * Requires admin or super_admin role
  */
-export async function unblockReporter(req: AuthRequest, res: Response) {
+export async function unblockReporter(req: Request, res: Response) {
   try {
     const { fingerprint } = req.body;
-    const institutionId = req.institutionId;
-    const adminId = req.adminId;
-    const adminEmail = req.email;
-    const role = req.role;
+    const institutionId = req.admin?.institutionId;
+    const adminId = req.admin?.adminId;
+    const adminEmail = req.admin?.email;
+    const role = req.admin?.role;
 
     if (!fingerprint) {
       return res.status(400).json({

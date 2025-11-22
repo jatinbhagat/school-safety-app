@@ -1,17 +1,16 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../db';
-import { AuthRequest } from '../middleware/jwtAuth';
 
 /**
  * GET /api/admin/reporter-history/:fingerprint
  * Get anonymized reporter history by fingerprint
  * Requires admin or super_admin role
  */
-export async function getReporterHistory(req: AuthRequest, res: Response) {
+export async function getReporterHistory(req: Request, res: Response) {
   try {
     const { fingerprint } = req.params;
-    const institutionId = req.institutionId;
-    const role = req.role;
+    const institutionId = req.admin?.institutionId;
+    const role = req.admin?.role;
 
     if (!fingerprint) {
       return res.status(400).json({

@@ -1,21 +1,20 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../db';
-import { AuthRequest } from '../middleware/jwtAuth';
 
 /**
  * POST /api/admin/incidents/:id/restore
  * Restore (overturn) a false report flag
  * Requires super_admin role
  */
-export async function restoreFalseReport(req: AuthRequest, res: Response) {
+export async function restoreFalseReport(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { reason } = req.body;
     const incidentId = parseInt(id, 10);
-    const institutionId = req.institutionId;
-    const adminId = req.adminId;
-    const adminEmail = req.email;
-    const role = req.role;
+    const institutionId = req.admin?.institutionId;
+    const adminId = req.admin?.adminId;
+    const adminEmail = req.admin?.email;
+    const role = req.admin?.role;
 
     if (isNaN(incidentId)) {
       return res.status(400).json({

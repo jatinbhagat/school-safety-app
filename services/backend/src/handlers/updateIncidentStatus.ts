@@ -1,6 +1,5 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../db';
-import { AuthRequest } from '../middleware/jwtAuth';
 import { reporterNotificationService } from '../services/reporterNotifications';
 
 /**
@@ -8,14 +7,14 @@ import { reporterNotificationService } from '../services/reporterNotifications';
  * Update incident status with event logging
  * Requires JWT authentication
  */
-export async function updateIncidentStatus(req: AuthRequest, res: Response) {
+export async function updateIncidentStatus(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { status, notes } = req.body;
     const incidentId = parseInt(id, 10);
-    const institutionId = req.institutionId;
-    const adminId = req.adminId;
-    const adminEmail = req.email;
+    const institutionId = req.admin?.institutionId;
+    const adminId = req.admin?.adminId;
+    const adminEmail = req.admin?.email;
 
     if (isNaN(incidentId)) {
       return res.status(400).json({

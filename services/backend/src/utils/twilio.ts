@@ -62,11 +62,11 @@ class TwilioService {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { sid?: string };
         console.log('✅ SMS sent successfully via Twilio:', data.sid);
         return { success: true, messageId: data.sid };
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json() as { message?: string };
         console.error('❌ Twilio error:', errorData);
         return { success: false, error: errorData.message || 'Failed to send SMS' };
       }

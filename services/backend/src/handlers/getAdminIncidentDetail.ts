@@ -1,17 +1,16 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../db';
-import { AuthRequest } from '../middleware/jwtAuth';
 
 /**
  * GET /api/admin/incidents/:id
  * Returns comprehensive incident details with tenant isolation
  * Requires JWT authentication
  */
-export async function getAdminIncidentDetail(req: AuthRequest, res: Response) {
+export async function getAdminIncidentDetail(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const incidentId = parseInt(id, 10);
-    const institutionId = req.institutionId;
+    const institutionId = req.admin?.institutionId;
 
     if (isNaN(incidentId)) {
       return res.status(400).json({
