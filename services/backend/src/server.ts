@@ -44,6 +44,10 @@ import { restoreFalseReport } from './handlers/restoreFalseReport';
 import { getReporterHistory } from './handlers/getReporterHistory';
 import { blockReporter, unblockReporter } from './handlers/blockReporter';
 
+// Phase 4 - Anonymous tracking portal
+import { getTrackingData } from './handlers/getTrackingData';
+import { submitDispute } from './handlers/submitDispute';
+
 dotenv.config({ path: '.env.local' });
 
 const app = express();
@@ -120,6 +124,10 @@ app.post('/api/admin/incidents/:id/restore', jwtAuth, restoreFalseReport); // Su
 app.get('/api/admin/reporter-history/:fingerprint', jwtAuth, getReporterHistory);
 app.post('/api/admin/block-reporter', jwtAuth, blockReporter);
 app.post('/api/admin/unblock-reporter', jwtAuth, unblockReporter);
+
+// Anonymous tracking portal (public - no authentication)
+app.get('/api/track/:token', getTrackingData);
+app.post('/api/dispute/:token', submitDispute);
 
 // DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
 app.get('/admin/incidents', adminAuth, getIncidents);
