@@ -97,17 +97,17 @@ export default function HomePage() {
 
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Anonymous Incident Reporting<br />
-            <span className="text-blue-600">Platform for Schools</span>
+            <span className="text-blue-600">Platform for Schools, Colleges & Institutions</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Students report safely. Staff respond instantly. Patterns emerge clearly. <span className="font-semibold text-blue-600">85-90% AI accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
+            Smart, Secure & Instant Safety for Every Institution. Students report anonymously, AI routes intelligently, staff respond immediately. <span className="font-semibold text-blue-600">85-90% AI accuracy.</span> <span className="font-semibold text-green-600">70% less admin work.</span>
           </p>
 
           {/* Hero Statistics */}
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
             <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 group">
-              <div className="text-4xl font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-300">5 Sec</div>
+              <div className="text-4xl font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-300">Instant</div>
               <div className="text-sm text-gray-600 font-medium">AI routes reports to the right staff instantly</div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 group">
@@ -211,10 +211,10 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            Complete Safety Platform
+            Smart, Secure & Instant Safety Platform
           </h2>
           <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
-            AI-powered incident management built specifically for schools and colleges.
+            AI-powered incident management built specifically for every institution - from schools to colleges to universities.
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -555,7 +555,7 @@ export default function HomePage() {
               <div className="text-sm text-gray-600">Incidents Reported</div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-md text-center">
-              <div className="text-3xl font-bold text-green-600 mb-1">5 Sec</div>
+              <div className="text-3xl font-bold text-green-600 mb-1">Real-time</div>
               <div className="text-sm text-gray-600">AI Response Time</div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-md text-center">
@@ -751,7 +751,7 @@ export default function HomePage() {
             <div className="col-span-2">
               <h3 className="text-white text-2xl font-bold mb-4">SafelyNotify.com</h3>
               <p className="text-gray-400 mb-4">
-                AI-powered anonymous incident reporting and safety management for educational institutions.
+                Smart, Secure & Instant Safety for Every Institution. AI-powered anonymous incident reporting and safety management.
               </p>
               <p className="text-sm text-gray-500">
                 Empowering students to speak up. Helping administrators respond faster. Making every campus safer.
