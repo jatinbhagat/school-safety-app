@@ -618,7 +618,21 @@ export default function AdminDashboard() {
       </div>
 
       {incidents.length === 0 && (
-        <div style={styles.emptyState}>No incidents found</div>
+        <div style={styles.emptyState}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>No incidents yet</div>
+            <div style={{ fontSize: '1rem', color: '#6b7280' }}>Get started by testing your kiosk or waiting for reports to come in.</div>
+          </div>
+          <Link
+            href={`/kiosk/${institutionSlug || 'demo'}`}
+            target="_blank"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <span>📱</span>
+            Test Kiosk & Add Incident
+          </Link>
+        </div>
       )}
 
       {incidents.length > 0 && filteredIncidents.length === 0 && (

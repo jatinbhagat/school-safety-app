@@ -65,7 +65,7 @@ export async function getAdminIncidents(req: Request, res: Response) {
         i.class_section as location,
         i.status,
         i.created_at,
-        i.updated_at,
+        i.created_at as updated_at,
         i.ai_meta,
         i.school_id,
         COALESCE((i.ai_meta->>'severity')::text, 'medium') as priority,

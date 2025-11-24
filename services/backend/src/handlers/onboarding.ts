@@ -643,15 +643,16 @@ export async function completeOnboarding(req: Request, res: Response) {
       // Create primary admin account with password (skip email verification)
       const adminResult = await client.query(
         `INSERT INTO institution_admins (
-          institution_id, name, email, role,
+          institution_id, name, email, role, phone,
           password_hash, email_verified
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, email, name, role`,
         [
           institutionId,
           institution.contact_name,
           institution.email,
           'super_admin', // First admin is always super_admin
+          institution.phone,
           passwordHash,
           true, // Skip email verification for now
         ]
