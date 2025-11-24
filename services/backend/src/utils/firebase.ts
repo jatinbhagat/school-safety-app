@@ -181,7 +181,7 @@ class FirebaseService {
 
       // Track invalid tokens for cleanup
       const invalidTokens: string[] = [];
-      response.responses.forEach((resp, idx) => {
+      response.responses.forEach((resp: admin.messaging.SendResponse, idx: number) => {
         if (!resp.success && resp.error) {
           const errorCode = resp.error.code;
           if (errorCode === 'messaging/invalid-registration-token' ||
