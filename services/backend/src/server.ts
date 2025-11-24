@@ -48,6 +48,15 @@ import { blockReporter, unblockReporter } from './handlers/blockReporter';
 import { getTrackingData } from './handlers/getTrackingData';
 import { submitDispute } from './handlers/submitDispute';
 
+// Phase 6 - Push notifications
+import {
+  registerPushToken,
+  deactivatePushToken,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  sendTestNotification,
+} from './handlers/pushNotifications';
+
 dotenv.config({ path: '.env.local' });
 
 const app = express();
@@ -128,6 +137,13 @@ app.post('/api/admin/unblock-reporter', jwtAuth, unblockReporter);
 // Anonymous tracking portal (public - no authentication)
 app.get('/api/track/:token', getTrackingData);
 app.post('/api/dispute/:token', submitDispute);
+
+// Push notification endpoints (authenticated)
+app.post('/api/admin/push-token', jwtAuth, registerPushToken);
+app.delete('/api/admin/push-token', jwtAuth, deactivatePushToken);
+app.get('/api/admin/notification-preferences', jwtAuth, getNotificationPreferences);
+app.put('/api/admin/notification-preferences', jwtAuth, updateNotificationPreferences);
+app.post('/api/admin/test-notification', jwtAuth, sendTestNotification);
 
 // DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
 app.get('/admin/incidents', adminAuth, getIncidents);

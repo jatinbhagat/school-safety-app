@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
+import { adminPushNotificationService } from '../services/adminPushNotifications';
 
 /**
  * POST /api/dispute/:token
@@ -162,8 +163,11 @@ export async function submitDispute(req: Request, res: Response) {
 
       await client.query('COMMIT');
 
-      // TODO: Send notification to super admins about new dispute
-      // This would be implemented in Phase 4/5 with push notifications
+      // Send push notification to super admins (async, don't wait)
+      const institutionId = incident.tenant_id || incident.school_id;
+      adminPushNotificationService.notifyDisputeSubmitted(incident.id, dispute.id, institutionId).catch(err => {
+        console.error('Failed to send dispute notification:', err);
+      });
 
       res.status(201).json({
         message: 'Dispute submitted successfully',

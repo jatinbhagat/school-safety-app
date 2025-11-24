@@ -244,32 +244,60 @@ export const blockReporter = (fingerprint, reason) => {
  * Register device push notification token
  * @param {string} token - Expo push token
  * @param {string} deviceType - 'ios' or 'android'
- * @param {string} deviceName - Optional device name
+ * @param {string} deviceId - Optional device identifier
  * @returns {Promise<object>}
  */
-export const registerPushToken = (token, deviceType, deviceName = '') => {
-  return apiClient('/api/push/register-token', {
+export const registerPushToken = (token, deviceType, deviceId = '') => {
+  return apiClient('/api/admin/push-token', {
     method: 'POST',
-    body: JSON.stringify({ token, deviceType, deviceName }),
+    body: JSON.stringify({ token, device_type: deviceType, device_id: deviceId }),
+  });
+};
+
+/**
+ * Deactivate push notification token
+ * @param {string} token - Expo push token
+ * @returns {Promise<object>}
+ */
+export const deactivatePushToken = (token) => {
+  return apiClient('/api/admin/push-token', {
+    method: 'DELETE',
+    body: JSON.stringify({ token }),
   });
 };
 
 /**
  * Get notification preferences
- * @returns {Promise<object>}
+ * @returns {Promise<{preferences: array}>}
  */
 export const getNotificationPreferences = () => {
-  return apiClient('/api/push/preferences', { method: 'GET' });
+  return apiClient('/api/admin/notification-preferences', { method: 'GET' });
 };
 
 /**
- * Update notification preferences
- * @param {object} preferences
+ * Update notification preference for a specific type
+ * @param {string} notificationType - Type of notification
+ * @param {boolean} enabled - Whether enabled
+ * @param {array} channels - Channels (e.g., ['push', 'email'])
  * @returns {Promise<object>}
  */
-export const updateNotificationPreferences = (preferences) => {
-  return apiClient('/api/push/preferences', {
+export const updateNotificationPreference = (notificationType, enabled, channels) => {
+  return apiClient('/api/admin/notification-preferences', {
     method: 'PUT',
-    body: JSON.stringify(preferences),
+    body: JSON.stringify({
+      notification_type: notificationType,
+      enabled,
+      channels,
+    }),
+  });
+};
+
+/**
+ * Send test push notification
+ * @returns {Promise<object>}
+ */
+export const sendTestNotification = () => {
+  return apiClient('/api/admin/test-notification', {
+    method: 'POST',
   });
 };
