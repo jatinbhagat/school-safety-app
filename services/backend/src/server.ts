@@ -177,6 +177,18 @@ app.get('/api/reporting/fields/catalog', getFieldsCatalog);
 // Add field to catalog (admin only)
 app.post('/api/reporting/fields/catalog', jwtAuth, addFieldToCatalog);
 
+// ==========================================
+// Database Migration & Verification Endpoints
+// ==========================================
+
+// Import migration handlers
+import { runMigration, verifyDatabase, listMigrations } from './handlers/migration';
+
+// Migration endpoints (admin only)
+app.post('/api/admin/migrate', jwtAuth, runMigration);
+app.get('/api/admin/database/verify', jwtAuth, verifyDatabase);
+app.get('/api/admin/migrations/list', jwtAuth, listMigrations);
+
 // Temporary migration endpoint (remove after deployment)
 app.get('/admin/run-migrations', async (_req: Request, res: Response) => {
   try {
