@@ -844,26 +844,34 @@ export async function completeOnboarding(req: Request, res: Response) {
         ]
       );
 
-      // Assign institution type based on institution_type field
-      let typeId = 3; // Default to corporate if not specified
+      // Assign institution type based on institution_type field using dynamic lookup
+      let typeKey = institution.institution_type;
       
-      if (institution.institution_type === 'school') {
-        typeId = 1;
-      } else if (institution.institution_type === 'college') {
-        typeId = 2;
-      } else if (institution.institution_type === 'university') {
-        typeId = 4;
-      } else if (institution.institution_type === 'corporate') {
-        typeId = 3;
-      }
-
-      // Update the institution with the correct type_id
-      await client.query(
-        `UPDATE institutions SET type_id = $1 WHERE id = $2`,
-        [typeId, institution.id]
+      // Look up the actual type_id from institution_types table
+      const typeResult = await client.query(
+        `SELECT id FROM institution_types WHERE type_key = $1`,
+        [typeKey]
       );
       
-      console.log(`[Onboarding] Assigned institution type: ${institution.institution_type} (type_id: ${typeId}) for institution: ${institution.id}`);
+      if (typeResult.rows.length === 0) {
+        // Fallback to corporate if type not found
+        const fallbackResult = await client.query(
+          `SELECT id FROM institution_types WHERE type_key = 'corporate'`
+        );
+        const typeId = fallbackResult.rows[0]?.id || 2; // Default to ID 2 (corporate)
+        await client.query(
+          `UPDATE institutions SET type_id = $1 WHERE id = $2`,
+          [typeId, institution.id]
+        );
+        console.log(`[Onboarding] Unknown type '${institution.institution_type}', assigned corporate (type_id: ${typeId})`);
+      } else {
+        const typeId = typeResult.rows[0].id;
+        await client.query(
+          `UPDATE institutions SET type_id = $1 WHERE id = $2`,
+          [typeId, institution.id]
+        );
+        console.log(`[Onboarding] Assigned institution type: ${institution.institution_type} -> ${typeKey} (type_id: ${typeId}) for institution: ${institution.id}`);
+      }
 
       // Copy default routing rules for this institution using the database function
       const copyRulesResult = await client.query(
