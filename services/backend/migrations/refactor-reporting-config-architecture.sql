@@ -1,73 +1,35 @@
--- Migration: Add Default Reporting Configurations
--- Description: Adds default category configurations for Demo, Schools, Colleges, and Corporates
--- Date: 2024-11-24
--- Version: 2.0
+-- Migration: Refactor Reporting Configuration Architecture
+-- Description: Replace complex tenant system with simple institution-type based templates
+-- Date: 2024-11-25
+-- Version: 1.0
 
--- Check if tenant_reporting_config table exists
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tenant_reporting_config') THEN
-        RAISE EXCEPTION 'tenant_reporting_config table does not exist. Please create the table first.';
-    END IF;
-END $$;
+-- Phase 1: Create new clean architecture tables
 
--- Insert Demo Configuration (UUID: 00000000-0000-0000-0000-000000000001)
-INSERT INTO tenant_reporting_config (tenant_id, config) VALUES 
-('00000000-0000-0000-0000-000000000001', '{
-  "categories": [
-    {
-      "id": "general-incident",
-      "name": "General Incident",
-      "description": "Any type of incident or safety concern",
-      "fields": [
-        {
-          "field_key": "description",
-          "required": true,
-          "enabled": true,
-          "order": 1
-        }
-      ]
-    },
-    {
-      "id": "safety-concern",
-      "name": "Safety Concern",
-      "description": "Safety hazards or concerns that need attention",
-      "fields": [
-        {
-          "field_key": "description",
-          "required": true,
-          "enabled": true,
-          "order": 1
-        }
-      ]
-    },
-    {
-      "id": "other",
-      "name": "Other",
-      "description": "Any other type of incident that doesn''t fit the above categories",
-      "fields": [
-        {
-          "field_key": "description",
-          "required": true,
-          "enabled": true,
-          "order": 1
-        }
-      ]
-    }
-  ],
-  "settings": {
-    "allow_anonymous": true,
-    "require_email": false,
-    "notification_emails": []
-  }
-}')
-ON CONFLICT (tenant_id) DO UPDATE SET 
-  config = EXCLUDED.config,
-  updated_at = NOW();
+-- 1. Institution types table (max ~10 rows, templates)
+CREATE TABLE institution_types (
+    id SERIAL PRIMARY KEY,
+    type_key VARCHAR(20) UNIQUE NOT NULL,
+    display_name VARCHAR(50) NOT NULL,
+    default_config JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 
--- Insert Schools Configuration (UUID: 00000000-0000-0000-0000-000000000002)
-INSERT INTO tenant_reporting_config (tenant_id, config) VALUES 
-('00000000-0000-0000-0000-000000000002', '{
+-- 2. Institution-specific configs (sparse table, only when customized)
+CREATE TABLE institution_configs (
+    institution_id UUID PRIMARY KEY REFERENCES institutions(id) ON DELETE CASCADE,
+    custom_config JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 3. Add type_id to institutions table
+ALTER TABLE institutions ADD COLUMN type_id INTEGER REFERENCES institution_types(id);
+
+-- Phase 2: Seed institution types with templates
+
+-- School template
+INSERT INTO institution_types (type_key, display_name, default_config) VALUES 
+('school', 'Schools', '{
   "categories": [
     {
       "id": "bullying-physical-safety",
@@ -179,14 +141,11 @@ INSERT INTO tenant_reporting_config (tenant_id, config) VALUES
     "require_email": false,
     "notification_emails": []
   }
-}')
-ON CONFLICT (tenant_id) DO UPDATE SET 
-  config = EXCLUDED.config,
-  updated_at = NOW();
+}');
 
--- Insert Colleges Configuration (UUID: 00000000-0000-0000-0000-000000000003)
-INSERT INTO tenant_reporting_config (tenant_id, config) VALUES 
-('00000000-0000-0000-0000-000000000003', '{
+-- College template
+INSERT INTO institution_types (type_key, display_name, default_config) VALUES 
+('college', 'Colleges & Universities', '{
   "categories": [
     {
       "id": "ragging-bullying",
@@ -311,14 +270,11 @@ INSERT INTO tenant_reporting_config (tenant_id, config) VALUES
     "require_email": false,
     "notification_emails": []
   }
-}')
-ON CONFLICT (tenant_id) DO UPDATE SET 
-  config = EXCLUDED.config,
-  updated_at = NOW();
+}');
 
--- Insert Corporates Configuration (UUID: 00000000-0000-0000-0000-000000000004)
-INSERT INTO tenant_reporting_config (tenant_id, config) VALUES 
-('00000000-0000-0000-0000-000000000004', '{
+-- Corporate template
+INSERT INTO institution_types (type_key, display_name, default_config) VALUES 
+('corporate', 'Corporates', '{
   "categories": [
     {
       "id": "workplace-harassment",
@@ -430,43 +386,45 @@ INSERT INTO tenant_reporting_config (tenant_id, config) VALUES
     "require_email": false,
     "notification_emails": []
   }
-}')
-ON CONFLICT (tenant_id) DO UPDATE SET 
-  config = EXCLUDED.config,
-  updated_at = NOW();
+}');
 
--- Verification: Check that all configurations were inserted
+-- Phase 3: Assign type_id to existing institutions (default to corporate for now)
+-- Note: You may need to manually update these based on actual institution data
+UPDATE institutions 
+SET type_id = (SELECT id FROM institution_types WHERE type_key = 'corporate')
+WHERE type_id IS NULL;
+
+-- Phase 4: Drop old tenant system (clean slate - no backward compatibility)
+DROP TABLE IF EXISTS tenant_reporting_config;
+
+-- Phase 5: Create indexes for performance
+CREATE INDEX idx_institution_configs_institution_id ON institution_configs(institution_id);
+CREATE INDEX idx_institutions_type_id ON institutions(type_id);
+CREATE INDEX idx_institution_types_type_key ON institution_types(type_key);
+
+-- Verification: Display new architecture summary
 DO $$
 DECLARE
-    config_count INTEGER;
+    types_count INTEGER;
+    institutions_count INTEGER;
+    configs_count INTEGER;
 BEGIN
-    SELECT COUNT(*) INTO config_count 
-    FROM tenant_reporting_config 
-    WHERE tenant_id IN (
-        '00000000-0000-0000-0000-000000000001',
-        '00000000-0000-0000-0000-000000000002', 
-        '00000000-0000-0000-0000-000000000003',
-        '00000000-0000-0000-0000-000000000004'
-    );
+    SELECT COUNT(*) INTO types_count FROM institution_types;
+    SELECT COUNT(*) INTO institutions_count FROM institutions WHERE type_id IS NOT NULL;
+    SELECT COUNT(*) INTO configs_count FROM institution_configs;
     
-    RAISE NOTICE 'Migration completed successfully. Inserted % default reporting configurations.', config_count;
-    
-    IF config_count != 4 THEN
-        RAISE WARNING 'Expected 4 configurations but found %. Please verify the migration.', config_count;
-    END IF;
+    RAISE NOTICE 'Migration completed successfully!';
+    RAISE NOTICE 'Institution types: %', types_count;
+    RAISE NOTICE 'Institutions with types: %', institutions_count;
+    RAISE NOTICE 'Custom configs: %', configs_count;
 END $$;
 
--- Display summary of inserted configurations
+-- Display institution types summary
 SELECT 
-    tenant_id,
-    jsonb_array_length(config->'categories') as category_count,
-    created_at,
-    updated_at
-FROM tenant_reporting_config 
-WHERE tenant_id IN (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000002', 
-    '00000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000004'
-)
-ORDER BY tenant_id;
+    id,
+    type_key,
+    display_name,
+    jsonb_array_length(default_config->'categories') as category_count,
+    created_at
+FROM institution_types 
+ORDER BY id;

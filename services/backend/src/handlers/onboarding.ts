@@ -131,8 +131,268 @@ export async function checkSlug(req: Request, res: Response) {
 }
 
 /**
+ * POST /api/onboarding/validate
+ * Validate all onboarding data without creating records - atomic pre-flight check
+ */
+export async function validateOnboardingData(req: Request, res: Response) {
+  const startTime = Date.now();
+
+  try {
+    const {
+      institutionType,
+      institutionName,
+      country,
+      state,
+      city,
+      location,
+      email,
+      contactName,
+      phone,
+      password,
+      urlSlug
+    } = req.body;
+
+    console.log(`[Onboarding] Validating complete onboarding data for: ${institutionName} (${email})`);
+
+    const validationErrors: { field: string; message: string }[] = [];
+
+    // Run all validations from both startOnboarding and completeOnboarding
+    // Institution validation
+    if (!institutionType || typeof institutionType !== 'string') {
+      validationErrors.push({ field: 'institutionType', message: 'Institution type is required' });
+    } else if (!['school', 'college', 'university', 'corporate', 'ngo'].includes(institutionType)) {
+      validationErrors.push({
+        field: 'institutionType',
+        message: 'Invalid institution type. Must be: school, college, university, corporate, or ngo'
+      });
+    }
+
+    if (!institutionName || typeof institutionName !== 'string') {
+      validationErrors.push({ field: 'institutionName', message: 'Institution name is required' });
+    } else if (institutionName.trim().length < 2) {
+      validationErrors.push({ field: 'institutionName', message: 'Institution name must be at least 2 characters' });
+    } else if (institutionName.length > 200) {
+      validationErrors.push({ field: 'institutionName', message: 'Institution name must be 200 characters or less' });
+    }
+
+    // Country/state validation
+    const VALID_COUNTRIES = ['US', 'CA', 'GB', 'AU', 'NZ', 'IE', 'IN', 'AE', 'SG', 'ID'];
+    const US_STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
+    const CA_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+    const AU_STATES = ['NSW', 'QLD', 'SA', 'TAS', 'VIC', 'WA', 'ACT', 'NT'];
+    const GB_REGIONS = ['ENG', 'SCT', 'WLS', 'NIR'];
+    const IN_STATES = ['AN', 'AP', 'AR', 'AS', 'BR', 'CH', 'CT', 'DH', 'DL', 'GA', 'GJ', 'HR', 'HP', 'JK', 'JH', 'KA', 'KL', 'LA', 'LD', 'MP', 'MH', 'MN', 'ML', 'MZ', 'NL', 'OR', 'PY', 'PB', 'RJ', 'SK', 'TN', 'TS', 'TR', 'UP', 'UK', 'WB'];
+    const AE_EMIRATES = ['AZ', 'AJ', 'DU', 'FU', 'RK', 'SH', 'UQ'];
+    const ID_PROVINCES = ['AC', 'BA', 'BB', 'BT', 'BE', 'JT', 'KT', 'ST', 'GO', 'JK', 'JA', 'JI', 'KI', 'NT', 'LA', 'MA', 'KU', 'MU', 'SA', 'SB', 'PA', 'RI', 'KR', 'SG', 'KS', 'SN', 'SS', 'JB', 'KB', 'NB', 'PB', 'SR', 'SU', 'YO'];
+
+    if (!country || typeof country !== 'string') {
+      validationErrors.push({ field: 'country', message: 'Country is required' });
+    } else if (!VALID_COUNTRIES.includes(country)) {
+      validationErrors.push({ field: 'country', message: 'Invalid country code' });
+    }
+
+    if (country && ['US', 'CA', 'AU', 'GB', 'IN', 'AE', 'ID'].includes(country)) {
+      if (!state || typeof state !== 'string') {
+        validationErrors.push({ field: 'state', message: 'State/Province is required for this country' });
+      } else {
+        if (country === 'US' && !US_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid US state code' });
+        }
+        if (country === 'CA' && !CA_PROVINCES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Canadian province code' });
+        }
+        if (country === 'AU' && !AU_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Australian state code' });
+        }
+        if (country === 'GB' && !GB_REGIONS.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid UK region code' });
+        }
+        if (country === 'IN' && !IN_STATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Indian state code' });
+        }
+        if (country === 'AE' && !AE_EMIRATES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid UAE emirate code' });
+        }
+        if (country === 'ID' && !ID_PROVINCES.includes(state)) {
+          validationErrors.push({ field: 'state', message: 'Invalid Indonesian province code' });
+        }
+      }
+    }
+
+    if (!city || typeof city !== 'string') {
+      validationErrors.push({ field: 'city', message: 'City is required' });
+    } else if (city.trim().length < 2) {
+      validationErrors.push({ field: 'city', message: 'City must be at least 2 characters' });
+    }
+
+    if (!email || typeof email !== 'string') {
+      validationErrors.push({ field: 'email', message: 'Email address is required' });
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        validationErrors.push({ field: 'email', message: 'Invalid email format' });
+      }
+    }
+
+    if (!contactName || typeof contactName !== 'string') {
+      validationErrors.push({ field: 'contactName', message: 'Contact person name is required' });
+    } else if (contactName.trim().length < 2) {
+      validationErrors.push({ field: 'contactName', message: 'Contact name must be at least 2 characters' });
+    }
+
+    if (!phone || typeof phone !== 'string') {
+      validationErrors.push({ field: 'phone', message: 'Phone number is required' });
+    } else if (phone.replace(/\D/g, '').length < 10) {
+      validationErrors.push({ field: 'phone', message: 'Phone number must be at least 10 digits' });
+    }
+
+    // Password validation (critical for atomic operation)
+    if (!password || typeof password !== 'string') {
+      validationErrors.push({ field: 'password', message: 'Password is required' });
+    } else {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        validationErrors.push({ field: 'password', message: passwordValidation.message || 'Password does not meet requirements' });
+      }
+    }
+
+    // URL slug validation
+    if (urlSlug) {
+      if (!/^[a-z0-9-]+$/.test(urlSlug)) {
+        validationErrors.push({ field: 'urlSlug', message: 'Invalid URL slug format. Only lowercase letters, numbers, and hyphens allowed' });
+      } else if (urlSlug.length < 3) {
+        validationErrors.push({ field: 'urlSlug', message: 'URL slug must be at least 3 characters long' });
+      } else if (urlSlug.length > 50) {
+        validationErrors.push({ field: 'urlSlug', message: 'URL slug must be 50 characters or less' });
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      console.log(`[Onboarding] Validation failed:`, validationErrors);
+      return res.status(400).json(
+        createErrorResponse(
+          OnboardingErrorCode.VALIDATION_ERROR,
+          'Please correct the following errors',
+          { errors: validationErrors }
+        )
+      );
+    }
+
+    // Check if email already exists
+    try {
+      const existing = await pool.query(
+        'SELECT id, institution_name FROM institutions WHERE email = $1',
+        [email]
+      );
+
+      if (existing.rows.length > 0) {
+        console.log(`[Onboarding] Duplicate email detected: ${email}`);
+        return res.status(409).json(
+          createErrorResponse(
+            OnboardingErrorCode.DUPLICATE_EMAIL,
+            'An institution with this email address already exists. Please use a different email or contact support.',
+            {
+              existingInstitution: existing.rows[0].institution_name,
+              supportEmail: 'support@safelynotify.com'
+            }
+          )
+        );
+      }
+    } catch (dbError: any) {
+      console.error('[Onboarding] Database error checking email:', dbError);
+      throw new Error('Database connection failed while checking email');
+    }
+
+    // Check/generate URL slug if provided
+    let finalSlug = '';
+    if (urlSlug) {
+      try {
+        const slugCheck = await pool.query(
+          'SELECT id FROM institutions WHERE url_slug = $1',
+          [urlSlug]
+        );
+
+        if (slugCheck.rows.length > 0) {
+          return res.status(409).json(
+            createErrorResponse(
+              OnboardingErrorCode.DUPLICATE_SLUG,
+              'This URL slug is already taken. Please choose a different one.'
+            )
+          );
+        }
+        finalSlug = urlSlug;
+      } catch (dbError: any) {
+        console.error('[Onboarding] Database error checking slug:', dbError);
+        throw new Error('Database connection failed while checking URL slug');
+      }
+    } else {
+      // Auto-generate slug
+      const autoSlug = institutionName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50);
+
+      let slugAttempt = 1;
+      let slugAvailable = false;
+      finalSlug = autoSlug;
+
+      while (!slugAvailable && slugAttempt <= 10) {
+        try {
+          const slugCheck = await pool.query(
+            'SELECT id FROM institutions WHERE url_slug = $1',
+            [finalSlug]
+          );
+
+          if (slugCheck.rows.length === 0) {
+            slugAvailable = true;
+          } else {
+            finalSlug = `${autoSlug}-${slugAttempt}`;
+            slugAttempt++;
+          }
+        } catch (dbError: any) {
+          console.error('[Onboarding] Database error checking slug:', dbError);
+          throw new Error('Database connection failed while checking URL slug');
+        }
+      }
+
+      if (!slugAvailable) {
+        return res.status(500).json(
+          createErrorResponse(
+            OnboardingErrorCode.INTERNAL_ERROR,
+            'Unable to generate unique URL slug. Please try again or contact support.'
+          )
+        );
+      }
+    }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[Onboarding] Validation passed successfully for: ${email}, slug: ${finalSlug} (${elapsed}ms)`);
+
+    res.json({
+      valid: true,
+      suggestedSlug: finalSlug,
+      message: 'All validation passed. Ready to create institution.',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[Onboarding] Validation error (${elapsed}ms):`, error);
+
+    res.status(500).json(
+      createErrorResponse(
+        OnboardingErrorCode.INTERNAL_ERROR,
+        'Failed to validate onboarding data. Please try again.',
+        { elapsed }
+      )
+    );
+  }
+}
+
+/**
  * POST /api/onboarding/start
  * Initialize onboarding and create institution record
+ * NOW EXPECTS PRE-VALIDATED DATA
  */
 export async function startOnboarding(req: Request, res: Response) {
   const startTime = Date.now();
@@ -498,9 +758,10 @@ export async function completeOnboarding(req: Request, res: Response) {
           {
             requirements: [
               'At least 8 characters long',
-              'Contains uppercase and lowercase letters',
-              'Contains at least one number',
-              'Contains at least one special character'
+              'Contains at least 1 uppercase letter',
+              'Contains at least 1 lowercase letter',
+              'Contains at least 1 number',
+              'Contains at least 1 special character (!@#$%^&*...)'
             ]
           }
         )
@@ -583,19 +844,26 @@ export async function completeOnboarding(req: Request, res: Response) {
         ]
       );
 
-      // Create tenant reporting config by cloning from demo tenant
-      // Only if tenant_id exists and config doesn't already exist
-      if (institution.tenant_id) {
-        await client.query(
-          `INSERT INTO tenant_reporting_config (tenant_id, config)
-           SELECT $1, config
-           FROM tenant_reporting_config
-           WHERE tenant_id = '00000000-0000-0000-0000-000000000001'
-           ON CONFLICT (tenant_id) DO NOTHING`,
-          [institution.tenant_id]
-        );
-        console.log(`[Onboarding] Created tenant config for tenant_id: ${institution.tenant_id}`);
+      // Assign institution type based on institution_type field
+      let typeId = 3; // Default to corporate if not specified
+      
+      if (institution.institution_type === 'school') {
+        typeId = 1;
+      } else if (institution.institution_type === 'college') {
+        typeId = 2;
+      } else if (institution.institution_type === 'university') {
+        typeId = 4;
+      } else if (institution.institution_type === 'corporate') {
+        typeId = 3;
       }
+
+      // Update the institution with the correct type_id
+      await client.query(
+        `UPDATE institutions SET type_id = $1 WHERE id = $2`,
+        [typeId, institution.id]
+      );
+      
+      console.log(`[Onboarding] Assigned institution type: ${institution.institution_type} (type_id: ${typeId}) for institution: ${institution.id}`);
 
       // Copy default routing rules for this institution using the database function
       const copyRulesResult = await client.query(

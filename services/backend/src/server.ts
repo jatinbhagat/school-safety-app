@@ -15,6 +15,8 @@ import { generateMicroGuide } from './handlers/generateMicroGuide';
 import { getMicroGuides } from './handlers/getMicroGuides';
 import { updateMicroGuide } from './handlers/updateMicroGuide';
 import { getIncidentDetail } from './handlers/getIncidentDetail';
+import { updateIncidentStatus } from './handlers/updateIncidentStatus';
+import { resolveIncidentEnhanced } from './handlers/resolveIncidentEnhanced';
 import { addStaffNote } from './handlers/addStaffNote';
 import { resolveIncident } from './handlers/resolveIncident';
 import { acceptIncident } from './handlers/acceptIncident';
@@ -26,13 +28,14 @@ import { initializeStorage } from './utils/localStorage';
 
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
-import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
+import { checkSlug, validateOnboardingData, startOnboarding, completeOnboarding } from './handlers/onboarding';
 import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser, updateProfile } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
-import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
+import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin, generateSlug } from './handlers/institutions';
 import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
+import { getInstitutionConfig, getInstitutionConfigBySlug, updateInstitutionConfig } from './handlers/getInstitutionConfig';
 import { getRoutingRules, getRoutingRule, createRoutingRule, updateRoutingRule, deleteRoutingRule, toggleRoutingRule, testRoutingRule } from './handlers/routingRules';
 
 dotenv.config({ path: '.env.local' });
@@ -96,11 +99,25 @@ app.get('/staff/stats', staffAuth, getStaffStats);
 // Admin endpoints (protected by admin token)
 // SECURE: Admin incidents endpoint with proper JWT authentication and tenant isolation
 app.get('/api/admin/incidents', jwtAuth, getAdminIncidents);
+app.get('/api/admin/incidents/:id', jwtAuth, getIncidentDetail);
+app.put('/api/admin/incidents/:id/status', jwtAuth, updateIncidentStatus);
+app.post('/api/admin/incidents/:id/resolve', jwtAuth, resolveIncidentEnhanced);
 app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
 
 // DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
-app.get('/admin/incidents', adminAuth, getIncidents);
-app.get('/admin/export', adminAuth, exportIncidents);
+// TODO: Remove these endpoints after clients migrate to secure API endpoints
+app.get('/admin/incidents', adminAuth, (req, res) => {
+  console.warn('⚠️  DEPRECATED: Using insecure /admin/incidents endpoint that returns ALL incidents');
+  console.warn('⚠️  SECURITY RISK: This endpoint bypasses tenant isolation');
+  console.warn('⚠️  Please migrate to /api/admin/incidents');
+  return getIncidents(req, res);
+});
+app.get('/admin/export', adminAuth, (req, res) => {
+  console.warn('⚠️  DEPRECATED: Using insecure /admin/export endpoint that returns ALL incidents');
+  console.warn('⚠️  SECURITY RISK: This endpoint bypasses tenant isolation');
+  console.warn('⚠️  Please migrate to /api/admin/export');
+  return exportIncidents(req, res);
+});
 app.get('/admin/safety-score', adminAuth, getSafetyScore);
 
 // Analytics endpoints (protected by staff token)
@@ -121,6 +138,7 @@ app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
 
 // Onboarding endpoints (public)
 app.post('/api/onboarding/check-slug', checkSlug);
+app.post('/api/onboarding/validate', validateOnboardingData);
 app.post('/api/onboarding/start', startOnboarding);
 app.post('/api/onboarding/complete', completeOnboarding);
 
@@ -144,6 +162,7 @@ app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
 app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
 app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
 app.post('/api/institutions/:id/admins', jwtAuth, addAdmin);
+app.post('/api/institutions/:id/generate-slug', jwtAuth, generateSlug);
 
 // Routing rules endpoints (authenticated)
 app.get('/api/institutions/:institutionId/routing-rules', jwtAuth, getRoutingRules);
@@ -165,11 +184,16 @@ app.get('/api/institutions/:id/qr-code', jwtAuth, getQRCode);
 // Reporting Configuration Endpoints
 // ==========================================
 
-// Get tenant reporting config (public for kiosk)
+// Get tenant reporting config (public for kiosk) - LEGACY
 app.get('/api/tenant/:tenantId/reporting-config', getTenantReportingConfig);
 
-// Update tenant reporting config (admin only - TODO: add auth middleware)
+// Update tenant reporting config (admin only - TODO: add auth middleware) - LEGACY
 app.post('/api/tenant/:tenantId/reporting-config', jwtAuth, updateTenantReportingConfig);
+
+// NEW: Institution configuration endpoints (simplified architecture)
+app.get('/api/institutions/:institutionId/config', getInstitutionConfig);
+app.post('/api/institutions/:institutionId/config', jwtAuth, updateInstitutionConfig);
+app.get('/api/kiosk/:slug/config', getInstitutionConfigBySlug);
 
 // Get fields catalog (public)
 app.get('/api/reporting/fields/catalog', getFieldsCatalog);
