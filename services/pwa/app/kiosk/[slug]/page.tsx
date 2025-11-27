@@ -400,7 +400,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
     try {
       if (effectiveOnline) {
         // Try to send directly with dynamic fields
-        const response = await fetch('http://localhost:3001/report', {
+        const response = await fetch(`${API_BASE_URL}/report`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

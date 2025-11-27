@@ -23,7 +23,7 @@ export function getApiBaseUrl(): string {
   }
 
   // Default fallback for local development
-  return 'http://localhost:3001';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 }
 
 // Debug logging (remove after fixing Azure env vars)

@@ -157,7 +157,7 @@ class OfflineQueue {
    * Sync pending reports to the server
    * This is a stub - implement retry logic and error handling as needed
    */
-  async syncReports(apiUrl: string = 'http://localhost:3001/report'): Promise<void> {
+  async syncReports(apiUrl: string = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/report`): Promise<void> {
     const pending = await this.getPendingReports();
 
     if (pending.length === 0) {
