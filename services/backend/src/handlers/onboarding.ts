@@ -655,8 +655,7 @@ export async function onboardInstitution(req: Request, res: Response) {
         adminId: admin.id,
         institutionId: institutionId,
         email: admin.email,
-        role: admin.role,
-        institutionName: institutionName
+        role: admin.role
       });
 
       return res.json({
