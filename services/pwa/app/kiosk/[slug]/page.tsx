@@ -133,9 +133,8 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       const instData = await instResponse.json();
       setInstitutionInfo(instData);
 
-      // Fetch reporting config using tenant_id
-      const tenantId = instData.tenant_id || 'demo';
-      const configResponse = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
+      // Fetch reporting config using institution slug
+      const configResponse = await fetch(`${API_BASE_URL}/api/kiosk/${params.slug}/config`);
 
       if (configResponse.ok) {
         const configData = await configResponse.json();
