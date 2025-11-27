@@ -63,7 +63,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [institutionId, setInstitutionId] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<number | null>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -156,10 +156,15 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      console.log('[Frontend] Starting onboarding...');
+      console.log('[Frontend] Starting atomic onboarding...');
 
-      // Step 1: Start onboarding (create institution)
-      const startResponse = await fetch(`${API_BASE_URL}/api/onboarding/start`, {
+      // Prepare staff emails array
+      const staffEmailsArray = data.staffEmails
+        ? data.staffEmails.split(',').map(email => email.trim()).filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        : [];
+
+      // Single atomic onboarding API call
+      const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,19 +176,25 @@ export default function OnboardingPage() {
           email: data.email,
           contactName: data.contactName,
           phone: data.phone,
+          password: data.password,
+          urlSlug: data.urlSlug,
+          features: data.features,
+          staffEmails: staffEmailsArray,
+          acceptedTerms: data.acceptedTerms,
         }),
       });
 
-      if (!startResponse.ok) {
-        const errorData = await startResponse.json();
-        console.error('[Frontend] Start onboarding error:', errorData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[Frontend] Atomic onboarding error:', errorData);
 
         // Handle different error types
         if (errorData.code === 'DUPLICATE_EMAIL') {
           setError(
-            `This email is already registered${errorData.details?.existingInstitution ? ` for ${errorData.details.existingInstitution}` : ''}. ` +
-            `Please use a different email or contact support at ${errorData.details?.supportEmail || 'support@safelynotify.com'}`
+            `This email is already registered. Please use a different email or contact support at ${errorData.details?.supportEmail || 'support@safelynotify.com'}`
           );
+        } else if (errorData.code === 'DUPLICATE_SLUG') {
+          setError('The URL slug is already taken. Please choose a different one.');
         } else if (errorData.code === 'VALIDATION_ERROR') {
           // Display field-specific errors
           if (errorData.details?.errors) {
@@ -198,71 +209,6 @@ export default function OnboardingPage() {
         } else if (errorData.code === 'DATABASE_ERROR') {
           setError('Database connection issue. Please check if the backend service is running and try again in a moment.');
         } else {
-          setError(errorData.message || 'Failed to start onboarding. Please try again.');
-        }
-
-        setErrorDetails(errorData);
-        return;
-      }
-
-      const startData = await startResponse.json();
-      const newInstitutionId = startData.institutionId;
-      setInstitutionId(newInstitutionId);
-
-      console.log(`[Frontend] Institution created: ID=${newInstitutionId}, Slug=${startData.urlSlug}`);
-
-      // Auto-generate slug if not set
-      if (!data.urlSlug && startData.urlSlug) {
-        updateData('urlSlug', startData.urlSlug);
-      }
-
-      // Step 2: Complete onboarding (create admin account and features)
-      const staffEmailsArray = data.staffEmails
-        ? data.staffEmails.split(',').map(email => email.trim()).filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-        : [];
-
-      console.log('[Frontend] Completing onboarding...');
-
-      const completeResponse = await fetch(`${API_BASE_URL}/api/onboarding/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          institutionId: newInstitutionId,
-          urlSlug: data.urlSlug || startData.urlSlug,
-          features: data.features,
-          staffEmails: staffEmailsArray,
-          acceptedTerms: data.acceptedTerms,
-          password: data.password,
-        }),
-      });
-
-      if (!completeResponse.ok) {
-        const errorData = await completeResponse.json();
-        console.error('[Frontend] Complete onboarding error:', errorData);
-
-        // Handle different error types
-        if (errorData.code === 'WEAK_PASSWORD') {
-          setError(errorData.message);
-          if (errorData.details?.requirements) {
-            setErrorDetails({
-              requirements: errorData.details.requirements
-            });
-          }
-        } else if (errorData.code === 'DUPLICATE_SLUG') {
-          setError('The URL slug is already taken. Please choose a different one.');
-        } else if (errorData.code === 'VALIDATION_ERROR') {
-          if (errorData.details?.errors) {
-            const fieldErrors = errorData.details.errors.map((e: any) =>
-              `${e.field}: ${e.message}`
-            ).join('\n');
-            setError(errorData.message + ':\n' + fieldErrors);
-          } else {
-            setError(errorData.message);
-          }
-          setErrorDetails(errorData.details);
-        } else if (errorData.code === 'INSTITUTION_NOT_FOUND') {
-          setError('Session expired. Please start the onboarding process again.');
-        } else {
           setError(errorData.message || 'Failed to complete onboarding. Please try again.');
         }
 
@@ -270,12 +216,15 @@ export default function OnboardingPage() {
         return;
       }
 
-      const completeData = await completeResponse.json();
+      const result = await response.json();
       console.log('[Frontend] Onboarding completed successfully');
+      
+      // Set institution ID for reference
+      setInstitutionId(result.institutionId);
 
       // Store JWT token
-      if (completeData.accessToken) {
-        localStorage.setItem('auth_token', completeData.accessToken);
+      if (result.token) {
+        localStorage.setItem('auth_token', result.token);
       }
 
       // Move to success step
