@@ -6,9 +6,8 @@ import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
 import { getIncidents, getAdminIncidents } from './handlers/getIncidents';
 import { assignIncident } from './handlers/assignIncident';
-import { exportIncidents, exportAdminIncidents } from './handlers/exportIncidents';
+import { exportAdminIncidents } from './handlers/exportIncidents';
 import { getHeatmap } from './handlers/getHeatmap';
-import { getSafetyScore } from './handlers/getSafetyScore';
 import { triageRoute } from './handlers/triageRoute';
 import { triageRouteAssign } from './handlers/triageRouteAssign';
 import { generateMicroGuide } from './handlers/generateMicroGuide';
@@ -22,7 +21,6 @@ import { resolveIncident } from './handlers/resolveIncident';
 import { acceptIncident } from './handlers/acceptIncident';
 import { getStaffStats } from './handlers/getStaffStats';
 import { pool } from './db';
-import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
 import { initializeStorage } from './utils/localStorage';
 
@@ -104,21 +102,7 @@ app.put('/api/admin/incidents/:id/status', jwtAuth, updateIncidentStatus);
 app.post('/api/admin/incidents/:id/resolve', jwtAuth, resolveIncidentEnhanced);
 app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
 
-// DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
-// TODO: Remove these endpoints after clients migrate to secure API endpoints
-app.get('/admin/incidents', adminAuth, (req, res) => {
-  console.warn('⚠️  DEPRECATED: Using insecure /admin/incidents endpoint that returns ALL incidents');
-  console.warn('⚠️  SECURITY RISK: This endpoint bypasses tenant isolation');
-  console.warn('⚠️  Please migrate to /api/admin/incidents');
-  return getIncidents(req, res);
-});
-app.get('/admin/export', adminAuth, (req, res) => {
-  console.warn('⚠️  DEPRECATED: Using insecure /admin/export endpoint that returns ALL incidents');
-  console.warn('⚠️  SECURITY RISK: This endpoint bypasses tenant isolation');
-  console.warn('⚠️  Please migrate to /api/admin/export');
-  return exportIncidents(req, res);
-});
-app.get('/admin/safety-score', adminAuth, getSafetyScore);
+// Legacy admin endpoints removed for security - use /api/admin/* endpoints instead
 
 // Analytics endpoints (protected by staff token)
 app.get('/analytics/heatmap', staffAuth, getHeatmap);
@@ -127,10 +111,10 @@ app.get('/analytics/heatmap', staffAuth, getHeatmap);
 app.post('/triage/route', staffAuth, triageRoute);
 app.post('/triage/route/assign', staffAuth, triageRouteAssign);
 
-// Micro-guides endpoints
-app.post('/micro-guides/generate', adminAuth, generateMicroGuide);
-app.get('/micro-guides', getMicroGuides);
-app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
+// Micro-guides endpoints (using secure JWT auth)
+app.post('/api/micro-guides/generate', jwtAuth, generateMicroGuide);
+app.get('/api/micro-guides', getMicroGuides);
+app.patch('/api/micro-guides/:id', jwtAuth, updateMicroGuide);
 
 // ==========================================
 // SafelyNotify.com - New Marketing & Onboarding Endpoints

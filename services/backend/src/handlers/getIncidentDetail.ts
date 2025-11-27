@@ -18,6 +18,11 @@ export async function getIncidentDetail(req: Request, res: Response) {
       });
     }
 
+    // Verify admin authentication
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
     // Fetch comprehensive incident details
     const incidentQuery = `
       SELECT
@@ -71,10 +76,10 @@ export async function getIncidentDetail(req: Request, res: Response) {
         'Anonymous' as reporter_name
       FROM incidents i
       LEFT JOIN institutions inst ON i.school_id = inst.id
-      WHERE i.id = $1
+      WHERE i.id = $1 AND i.school_id = $2
     `;
 
-    const incidentResult = await pool.query(incidentQuery, [incidentId]);
+    const incidentResult = await pool.query(incidentQuery, [incidentId, req.admin.institutionId]);
 
     if (incidentResult.rows.length === 0) {
       return res.status(404).json({
@@ -140,51 +145,43 @@ export async function getIncidentDetail(req: Request, res: Response) {
 
     const routingResult = await pool.query(routingQuery, [incidentId]);
 
-    // Format the response with enhanced data structure
+    // Map backend status to frontend status
+    const statusMapping: { [key: string]: string } = {
+      'pending': 'open',
+      'assigned': 'in_progress', 
+      'resolved': 'resolved'
+    };
+    
+    const frontendStatus = statusMapping[incident.status] || incident.status;
+    
+    // Format the incident to match frontend expectations
     const formattedIncident = {
-      ...incident,
-      assigned_to: incident.assigned_to_email ? {
-        email: incident.assigned_to_email,
-        name: incident.assigned_to_name || 'Unknown',
-        role: incident.assigned_to_role || 'Staff',
-        assigned_at: incident.assigned_at,
-        assigned_by: incident.assigned_by
-      } : null,
-      
-      resolution: incident.resolution_type ? {
-        resolution_type: incident.resolution_type,
-        incident_validity: incident.incident_validity,
-        resolution_summary: incident.resolution_summary,
-        actions_taken: incident.actions_taken ? JSON.parse(incident.actions_taken) : [],
-        follow_up_required: incident.follow_up_required === 'true',
-        follow_up_date: incident.follow_up_date,
-        lessons_learned: incident.lessons_learned,
-        resolved_by: incident.resolved_by,
-        resolved_by_role: incident.resolved_by_role,
-        resolved_at: incident.resolved_at,
-        resolution_time_minutes: incident.resolution_time_minutes ? parseInt(incident.resolution_time_minutes) : null
-      } : null,
-      
+      id: incident.id,
+      type: incident.type, // category is already aliased as type
+      status: frontendStatus,
+      description: incident.description,
+      location: incident.location,
+      created_at: incident.created_at,
+      updated_at: incident.created_at, // fallback to created_at
       ai_meta: {
-        ...incident.ai_meta,
-        confidence: incident.ai_confidence ? parseFloat(incident.ai_confidence) : null,
+        severity: incident.priority,
         risk_level: incident.risk_level,
-        recommended_role: incident.recommended_role,
-        reasoning: incident.ai_reasoning
+        category: incident.type,
+        confidence: incident.ai_confidence ? parseFloat(incident.ai_confidence) : null,
+        routing_reason: incident.ai_reasoning
       },
-      
-      institution: {
-        name: incident.institution_name,
-        slug: incident.url_slug
-      }
+      assigned_to: incident.assigned_to_email ? {
+        id: 1, // placeholder
+        name: incident.assigned_to_name || 'Unknown',
+        email: incident.assigned_to_email,
+        role: incident.assigned_to_role || 'Staff'
+      } : null,
+      attachments: incident.attachments || [],
+      notes: notesResult.rows,
+      timeline: eventsResult.rows
     };
 
-    res.status(200).json({
-      incident: formattedIncident,
-      notes: notesResult.rows,
-      timeline: eventsResult.rows,
-      aiRecommendation: routingResult.rows.length > 0 ? routingResult.rows[0] : null,
-    });
+    res.status(200).json(formattedIncident);
   } catch (error) {
     console.error('Error fetching incident detail:', error);
     res.status(500).json({

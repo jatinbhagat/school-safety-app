@@ -20,10 +20,24 @@ export async function updateIncidentStatus(req: Request, res: Response) {
   const client = await pool.connect();
 
   try {
+    console.log('🔄 Status Update Request:', {
+      incidentId: req.params.id,
+      body: req.body,
+      adminInfo: req.admin ? {
+        email: req.admin.email,
+        institutionId: req.admin.institutionId
+      } : null,
+      headers: {
+        authorization: req.headers.authorization ? 'Bearer [REDACTED]' : 'None',
+        contentType: req.headers['content-type']
+      }
+    });
+
     const { id } = req.params;
     const incidentId = parseInt(id, 10);
 
     if (isNaN(incidentId)) {
+      console.error('❌ Invalid incident ID:', id);
       return res.status(400).json({
         error: 'Bad request',
         message: 'Invalid incident ID',
@@ -37,13 +51,20 @@ export async function updateIncidentStatus(req: Request, res: Response) {
       assigned_to,
     }: UpdateStatusBody = req.body;
 
-    // Get user info from JWT token
-    const userEmail = (req as any).user?.email || 'unknown@system';
-    const userName = (req as any).user?.name || 'System User';
-    const userRole = (req as any).user?.role || 'admin';
+    // Get admin info from JWT token
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const userEmail = req.admin.email;
+    const userName = req.admin.name || 'Admin User';
+    const userRole = req.admin.role;
 
     // Validate required fields
+    console.log('📋 Validating request fields:', { new_status, reason: reason ? '[PROVIDED]' : '[MISSING]' });
+    
     if (!new_status) {
+      console.error('❌ Missing new_status field');
       return res.status(400).json({
         error: 'Validation failed',
         message: 'new_status is required',
@@ -51,48 +72,50 @@ export async function updateIncidentStatus(req: Request, res: Response) {
     }
 
     if (!reason || reason.trim() === '') {
+      console.error('❌ Missing or empty reason field');
       return res.status(400).json({
         error: 'Validation failed',
         message: 'reason is required for status changes',
       });
     }
 
-    // Valid statuses
-    const validStatuses = [
-      'pending',
-      'assigned',
-      'investigating',
-      'awaiting_response',
-      'resolved',
-      'closed',
-      'escalated'
-    ];
+    // Valid status values (canonical)
+    const validStatuses = ['open', 'assigned', 'resolved'];
 
     if (!validStatuses.includes(new_status)) {
+      console.error('❌ Invalid status value:', { 
+        provided: new_status, 
+        validOptions: validStatuses
+      });
       return res.status(400).json({
         error: 'Validation failed',
         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
       });
     }
 
+    console.log('✅ Status validation passed:', new_status);
+
     await client.query('BEGIN');
 
-    // Fetch current incident
+    // Fetch current incident with tenant security
     const incidentQuery = `
       SELECT id, status, ai_meta, created_at, school_id
       FROM incidents
-      WHERE id = $1
+      WHERE id = $1 AND school_id = $2
     `;
 
-    const incidentResult = await client.query(incidentQuery, [incidentId]);
+    const incidentResult = await client.query(incidentQuery, [incidentId, req.admin.institutionId]);
 
     if (incidentResult.rows.length === 0) {
       await client.query('ROLLBACK');
+      console.error('❌ Incident not found:', { incidentId, institutionId: req.admin.institutionId });
       return res.status(404).json({
         error: 'Not found',
         message: 'Incident not found',
       });
     }
+
+    console.log('✅ Incident found, proceeding with update');
 
     const incident = incidentResult.rows[0];
     const oldStatus = incident.status;
@@ -120,7 +143,7 @@ export async function updateIncidentStatus(req: Request, res: Response) {
         status = $2,
         ai_meta = $3,
         updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 AND school_id = $4
       RETURNING id, category, description, status, created_at, ai_meta
     `;
 
@@ -128,6 +151,7 @@ export async function updateIncidentStatus(req: Request, res: Response) {
       incidentId,
       new_status,
       JSON.stringify(updatedAiMeta),
+      req.admin.institutionId,
     ]);
 
     // Add status change note if provided
@@ -208,6 +232,13 @@ export async function updateIncidentStatus(req: Request, res: Response) {
 
     await client.query('COMMIT');
 
+    console.log('🎉 Status update successful:', { 
+      incidentId, 
+      oldStatus, 
+      newStatus: new_status,
+      updatedBy: userName 
+    });
+
     res.status(200).json({
       incident: updateResult.rows[0],
       statusChange: {
@@ -222,7 +253,12 @@ export async function updateIncidentStatus(req: Request, res: Response) {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error updating incident status:', error);
+    console.error('💥 Error updating incident status:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      incidentId: req.params.id,
+      adminEmail: req.admin?.email
+    });
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to update incident status',
