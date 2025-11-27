@@ -153,7 +153,8 @@ export default function AdminDashboard() {
       setUserRole(userData.role);
 
       // Get institution details
-      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${userData.institutionId}`, {
+      const institutionId = userData.institution?.id || userData.institutionId;
+      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
