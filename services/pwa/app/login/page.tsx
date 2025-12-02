@@ -29,6 +29,10 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
+  // DEBUG: Log API URL to console (remove after debugging)
+  console.log('🔍 DEBUG API_BASE_URL:', API_BASE_URL);
+  console.log('🔍 DEBUG process.env.NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
 
   // Check if already logged in
   useEffect(() => {

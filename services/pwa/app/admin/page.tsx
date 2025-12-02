@@ -42,6 +42,10 @@ export default function AdminDashboard() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
+    // Reset error state when component mounts
+    setError(null);
+    setExporting(false);
+    
     fetchUserAndInstitution();
     fetchIncidents();
   }, []);
@@ -153,7 +157,8 @@ export default function AdminDashboard() {
       setUserRole(userData.role);
 
       // Get institution details
-      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${userData.institutionId}`, {
+      const institutionId = userData.institution?.id || userData.institutionId;
+      const instResponse = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -168,6 +173,7 @@ export default function AdminDashboard() {
   };
 
   const fetchIncidents = async () => {
+    let response: Response | undefined;
     try {
       setLoading(true);
       setError(null);
@@ -182,7 +188,7 @@ export default function AdminDashboard() {
         'Authorization': `Bearer ${token}`
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/incidents`, { headers });
+      response = await fetch(`${API_BASE_URL}/api/admin/incidents`, { headers });
       
       if (response.status === 401) {
         // Token expired or invalid
@@ -192,7 +198,7 @@ export default function AdminDashboard() {
       }
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         throw new Error(errorData.message || 'Failed to fetch incidents');
       }
       
@@ -202,7 +208,23 @@ export default function AdminDashboard() {
       console.log(`[Security] Loaded ${data.length} incidents for current institution`);
     } catch (err) {
       console.error('Error fetching incidents:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      
+      let errorMessage = 'Failed to load incidents. Please try again';
+      
+      if (response) {
+        if (response.status === 403) {
+          errorMessage = 'You do not have permission to view incidents';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later';
+        } else if (response.status === 404) {
+          errorMessage = 'Incidents endpoint not found';
+        }
+      } else {
+        // Network error
+        errorMessage = 'Network error. Please check your connection';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -418,11 +440,9 @@ export default function AdminDashboard() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
+              <option value="open">Open</option>
               <option value="assigned">Assigned</option>
-              <option value="in_progress">In Progress</option>
               <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
             </select>
           </div>
 
@@ -544,9 +564,9 @@ export default function AdminDashboard() {
           <span style={styles.statValue}>{filteredIncidents.length}</span>
         </div>
         <div style={styles.stat}>
-          <span style={styles.statLabel}>Pending:</span>
+          <span style={styles.statLabel}>Open:</span>
           <span style={styles.statValue}>
-            {filteredIncidents.filter((i) => i.status === 'pending').length}
+            {filteredIncidents.filter((i) => i.status === 'open').length}
           </span>
         </div>
         <div style={styles.stat}>
@@ -618,7 +638,21 @@ export default function AdminDashboard() {
       </div>
 
       {incidents.length === 0 && (
-        <div style={styles.emptyState}>No incidents found</div>
+        <div style={styles.emptyState}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>No incidents yet</div>
+            <div style={{ fontSize: '1rem', color: '#6b7280' }}>Get started by testing your kiosk or waiting for reports to come in.</div>
+          </div>
+          <Link
+            href={`/kiosk/${institutionSlug || 'demo'}`}
+            target="_blank"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <span>📱</span>
+            Test Kiosk & Add Incident
+          </Link>
+        </div>
       )}
 
       {incidents.length > 0 && filteredIncidents.length === 0 && (
@@ -666,7 +700,7 @@ const getRiskBadgeStyle = (riskLevel: string) => {
 
 const getStatusBadgeStyle = (status: string) => {
   const s = status.toLowerCase();
-  if (s === 'pending') {
+  if (s === 'open') {
     return { backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a' };
   }
   if (s === 'assigned') {

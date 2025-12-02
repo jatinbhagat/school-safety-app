@@ -6,33 +6,34 @@ import { postReport } from './handlers/postReport';
 import { getUploadUrl } from './handlers/getUploadUrl';
 import { getIncidents, getAdminIncidents } from './handlers/getIncidents';
 import { assignIncident } from './handlers/assignIncident';
-import { exportIncidents, exportAdminIncidents } from './handlers/exportIncidents';
+import { exportAdminIncidents } from './handlers/exportIncidents';
 import { getHeatmap } from './handlers/getHeatmap';
-import { getSafetyScore } from './handlers/getSafetyScore';
 import { triageRoute } from './handlers/triageRoute';
 import { triageRouteAssign } from './handlers/triageRouteAssign';
 import { generateMicroGuide } from './handlers/generateMicroGuide';
 import { getMicroGuides } from './handlers/getMicroGuides';
 import { updateMicroGuide } from './handlers/updateMicroGuide';
 import { getIncidentDetail } from './handlers/getIncidentDetail';
+import { updateIncidentStatus } from './handlers/updateIncidentStatus';
+import { resolveIncidentEnhanced } from './handlers/resolveIncidentEnhanced';
 import { addStaffNote } from './handlers/addStaffNote';
 import { resolveIncident } from './handlers/resolveIncident';
 import { acceptIncident } from './handlers/acceptIncident';
 import { getStaffStats } from './handlers/getStaffStats';
 import { pool } from './db';
-import { adminAuth } from './middleware/adminAuth';
 import { staffAuth } from './middleware/staffAuth';
 import { initializeStorage } from './utils/localStorage';
 
 // New SafelyNotify.com imports
 import { jwtAuth, requireSuperAdmin } from './middleware/jwtAuth';
-import { checkSlug, startOnboarding, completeOnboarding } from './handlers/onboarding';
+import { checkSlug, validateOnboardingData, onboardInstitution } from './handlers/onboarding';
 import { verifyEmail, checkEmail, login, forgotPassword, resetPassword, getCurrentUser, updateProfile } from './handlers/auth';
 import { uploadLogoHandler } from './handlers/uploadLogo';
 import { generateQRCode, getQRCode } from './handlers/generateQR';
-import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin } from './handlers/institutions';
+import { getInstitution, getInstitutionBySlug, updateInstitution, updateFeatures, getAdmins, addAdmin, generateSlug } from './handlers/institutions';
 import { submitDemoRequest, getDemoRequests } from './handlers/demo';
 import { getTenantReportingConfig, updateTenantReportingConfig, getFieldsCatalog, addFieldToCatalog } from './handlers/reportingConfig';
+import { getInstitutionConfig, getInstitutionConfigBySlug, updateInstitutionConfig } from './handlers/getInstitutionConfig';
 import { getRoutingRules, getRoutingRule, createRoutingRule, updateRoutingRule, deleteRoutingRule, toggleRoutingRule, testRoutingRule } from './handlers/routingRules';
 
 // Phase 2 - New incident management and false reporting imports
@@ -118,11 +119,10 @@ app.get('/staff/stats', staffAuth, getStaffStats);
 // Admin endpoints (protected by admin token)
 // SECURE: Admin incidents endpoint with proper JWT authentication and tenant isolation
 app.get('/api/admin/incidents', jwtAuth, getAdminIncidents);
-app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
-
-// Phase 2 - Enhanced incident management endpoints (JWT authenticated)
-app.get('/api/admin/incidents/:id', jwtAuth, getAdminIncidentDetail);
+app.get('/api/admin/incidents/:id', jwtAuth, getAdminIncidentDetail || getIncidentDetail);
 app.put('/api/admin/incidents/:id/status', jwtAuth, updateIncidentStatus);
+app.post('/api/admin/incidents/:id/resolve', jwtAuth, resolveIncidentEnhanced);
+app.get('/api/admin/export', jwtAuth, exportAdminIncidents);
 
 // False reporting endpoints (admin and super_admin only)
 app.post('/api/admin/incidents/:id/flag-false', jwtAuth, flagFalseReport);
@@ -145,10 +145,7 @@ app.get('/api/admin/notification-preferences', jwtAuth, getNotificationPreferenc
 app.put('/api/admin/notification-preferences', jwtAuth, updateNotificationPreferences);
 app.post('/api/admin/test-notification', jwtAuth, sendTestNotification);
 
-// DEPRECATED: Legacy admin endpoints - INSECURE! Return ALL incidents from ALL institutions
-app.get('/admin/incidents', adminAuth, getIncidents);
-app.get('/admin/export', adminAuth, exportIncidents);
-app.get('/admin/safety-score', adminAuth, getSafetyScore);
+// Legacy admin endpoints removed for security - use /api/admin/* endpoints instead
 
 // Analytics endpoints (protected by staff token)
 app.get('/analytics/heatmap', staffAuth, getHeatmap);
@@ -157,10 +154,10 @@ app.get('/analytics/heatmap', staffAuth, getHeatmap);
 app.post('/triage/route', staffAuth, triageRoute);
 app.post('/triage/route/assign', staffAuth, triageRouteAssign);
 
-// Micro-guides endpoints
-app.post('/micro-guides/generate', adminAuth, generateMicroGuide);
-app.get('/micro-guides', getMicroGuides);
-app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
+// Micro-guides endpoints (using secure JWT auth)
+app.post('/api/micro-guides/generate', jwtAuth, generateMicroGuide);
+app.get('/api/micro-guides', getMicroGuides);
+app.patch('/api/micro-guides/:id', jwtAuth, updateMicroGuide);
 
 // ==========================================
 // SafelyNotify.com - New Marketing & Onboarding Endpoints
@@ -168,8 +165,8 @@ app.patch('/micro-guides/:id', adminAuth, updateMicroGuide);
 
 // Onboarding endpoints (public)
 app.post('/api/onboarding/check-slug', checkSlug);
-app.post('/api/onboarding/start', startOnboarding);
-app.post('/api/onboarding/complete', completeOnboarding);
+app.post('/api/onboarding/validate', validateOnboardingData);
+app.post('/api/onboarding', onboardInstitution);
 
 // Authentication endpoints (public)
 app.post('/api/auth/verify-email', verifyEmail);
@@ -191,6 +188,7 @@ app.patch('/api/institutions/:id', jwtAuth, updateInstitution);
 app.patch('/api/institutions/:id/features', jwtAuth, updateFeatures);
 app.get('/api/institutions/:id/admins', jwtAuth, getAdmins);
 app.post('/api/institutions/:id/admins', jwtAuth, addAdmin);
+app.post('/api/institutions/:id/generate-slug', jwtAuth, generateSlug);
 
 // Routing rules endpoints (authenticated)
 app.get('/api/institutions/:institutionId/routing-rules', jwtAuth, getRoutingRules);
@@ -212,17 +210,34 @@ app.get('/api/institutions/:id/qr-code', jwtAuth, getQRCode);
 // Reporting Configuration Endpoints
 // ==========================================
 
-// Get tenant reporting config (public for kiosk)
+// Get tenant reporting config (public for kiosk) - LEGACY
 app.get('/api/tenant/:tenantId/reporting-config', getTenantReportingConfig);
 
-// Update tenant reporting config (admin only - TODO: add auth middleware)
+// Update tenant reporting config (admin only - TODO: add auth middleware) - LEGACY
 app.post('/api/tenant/:tenantId/reporting-config', jwtAuth, updateTenantReportingConfig);
+
+// NEW: Institution configuration endpoints (simplified architecture)
+app.get('/api/institutions/:institutionId/config', getInstitutionConfig);
+app.post('/api/institutions/:institutionId/config', jwtAuth, updateInstitutionConfig);
+app.get('/api/kiosk/:slug/config', getInstitutionConfigBySlug);
 
 // Get fields catalog (public)
 app.get('/api/reporting/fields/catalog', getFieldsCatalog);
 
 // Add field to catalog (admin only)
 app.post('/api/reporting/fields/catalog', jwtAuth, addFieldToCatalog);
+
+// ==========================================
+// Database Migration & Verification Endpoints
+// ==========================================
+
+// Import migration handlers
+import { runMigration, verifyDatabase, listMigrations } from './handlers/migration';
+
+// Migration endpoints (admin only)
+app.post('/api/admin/migrate', jwtAuth, runMigration);
+app.get('/api/admin/database/verify', jwtAuth, verifyDatabase);
+app.get('/api/admin/migrations/list', jwtAuth, listMigrations);
 
 // Temporary migration endpoint (remove after deployment)
 app.get('/admin/run-migrations', async (_req: Request, res: Response) => {

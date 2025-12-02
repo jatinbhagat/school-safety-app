@@ -77,6 +77,9 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
   useEffect(() => {
     // Initialize offline queue
     offlineQueue.init();
+    
+    // Clear any stale offline mode flags
+    localStorage.removeItem('demo_offline_mode');
 
     // Check demo mode
     setDemoMode(isDemoMode());
@@ -133,9 +136,8 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       const instData = await instResponse.json();
       setInstitutionInfo(instData);
 
-      // Fetch reporting config using tenant_id
-      const tenantId = instData.tenant_id || 'demo';
-      const configResponse = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
+      // Fetch reporting config using institution slug
+      const configResponse = await fetch(`${API_BASE_URL}/api/kiosk/${params.slug}/config`);
 
       if (configResponse.ok) {
         const configData = await configResponse.json();
@@ -396,12 +398,23 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       timestamp: Date.now(),
     };
 
-    const effectiveOnline = isOnline && !simulatedOffline;
+    // More robust online detection - prioritize actual connectivity over flags
+    const navigatorOnline = navigator.onLine;
+    const effectiveOnline = navigatorOnline && !simulatedOffline;
+    
+    console.log('🌐 Kiosk submission state:', { 
+      isOnline, 
+      navigatorOnline,
+      simulatedOffline, 
+      effectiveOnline,
+      demoOfflineStorage: localStorage.getItem('demo_offline_mode')
+    });
 
     try {
-      if (effectiveOnline) {
+      // Always try online submission first, regardless of flags
+      if (navigatorOnline) {
         // Try to send directly with dynamic fields
-        const response = await fetch('http://localhost:3001/report', {
+        const response = await fetch(`${API_BASE_URL}/report`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -443,7 +456,7 @@ export default function KioskPage({ params }: { params: { slug: string } }) {
       console.error('Error submitting report:', error);
 
       // If online submission failed, queue it
-      if (effectiveOnline) {
+      if (navigatorOnline) {
         console.log('Online submission failed, queuing for later');
         await offlineQueue.enqueueReport(report);
         setShowSuccess(true);

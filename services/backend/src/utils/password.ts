@@ -6,7 +6,9 @@ const SALT_ROUNDS = 10;
  * Validate password meets requirements:
  * - Min 8 characters
  * - At least 1 uppercase letter
+ * - At least 1 lowercase letter  
  * - At least 1 number
+ * - At least 1 special character
  */
 export function validatePassword(password: string): { valid: boolean; message?: string } {
   if (password.length < 8) {
@@ -17,8 +19,16 @@ export function validatePassword(password: string): { valid: boolean; message?: 
     return { valid: false, message: 'Password must contain at least 1 uppercase letter' };
   }
 
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least 1 lowercase letter' };
+  }
+
   if (!/[0-9]/.test(password)) {
     return { valid: false, message: 'Password must contain at least 1 number' };
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least 1 special character (!@#$%^&*...)' };
   }
 
   return { valid: true };

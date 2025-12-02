@@ -56,7 +56,7 @@ export async function getAdminIncidents(req: Request, res: Response) {
       });
     }
 
-    // Query incidents only for the admin's institution
+    // Query incidents for the admin's institution only (proper tenant isolation)
     const result = await pool.query(`
       SELECT
         i.id,
@@ -65,7 +65,7 @@ export async function getAdminIncidents(req: Request, res: Response) {
         i.class_section as location,
         i.status,
         i.created_at,
-        i.updated_at,
+        i.created_at as updated_at,
         i.ai_meta,
         i.school_id,
         COALESCE((i.ai_meta->>'severity')::text, 'medium') as priority,
@@ -73,7 +73,8 @@ export async function getAdminIncidents(req: Request, res: Response) {
         (i.ai_meta->>'assigned_at')::text as assigned_at,
         'Anonymous' as reporter_name,
         inst.institution_name,
-        inst.url_slug
+        inst.url_slug,
+        'institution' as source
       FROM incidents i
       INNER JOIN institutions inst ON i.school_id = inst.id
       WHERE i.school_id = $1

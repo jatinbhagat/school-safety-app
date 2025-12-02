@@ -297,3 +297,112 @@ export async function addAdmin(req: Request, res: Response) {
     res.status(500).json({ error: 'Failed to add admin' });
   }
 }
+
+/**
+ * Helper function to generate URL slug from institution name
+ */
+function generateSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric chars except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    .substring(0, 50); // Limit to 50 characters
+}
+
+/**
+ * POST /api/institutions/:id/generate-slug
+ * Auto-generate missing URL slug for institution
+ */
+export async function generateSlug(req: Request, res: Response) {
+  try {
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const institutionId = parseInt(req.params.id);
+
+    // Verify this admin belongs to this institution
+    if (req.admin.institutionId !== institutionId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get current institution details
+    const institutionResult = await pool.query(
+      'SELECT id, institution_name, url_slug FROM institutions WHERE id = $1',
+      [institutionId]
+    );
+
+    if (institutionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Institution not found' });
+    }
+
+    const institution = institutionResult.rows[0];
+
+    // Check if slug already exists
+    if (institution.url_slug && institution.url_slug.trim()) {
+      return res.status(409).json({ 
+        error: 'URL slug already exists',
+        currentSlug: institution.url_slug
+      });
+    }
+
+    // Generate base slug from institution name
+    let baseSlug = generateSlugFromName(institution.institution_name);
+    if (!baseSlug) {
+      baseSlug = 'institution'; // Fallback if name generates empty slug
+    }
+
+    // Check for conflicts and find available slug
+    let finalSlug = baseSlug;
+    let counter = 1;
+    
+    while (true) {
+      const conflictResult = await pool.query(
+        'SELECT id FROM institutions WHERE url_slug = $1 AND id != $2',
+        [finalSlug, institutionId]
+      );
+
+      if (conflictResult.rows.length === 0) {
+        // No conflict, we can use this slug
+        break;
+      }
+
+      // Try with counter suffix
+      finalSlug = `${baseSlug}-${counter}`;
+      counter++;
+
+      // Safety check to prevent infinite loop
+      if (counter > 1000) {
+        throw new Error('Could not find available slug after 1000 attempts');
+      }
+    }
+
+    // Update institution with generated slug
+    await pool.query(
+      'UPDATE institutions SET url_slug = $1, updated_at = NOW() WHERE id = $2',
+      [finalSlug, institutionId]
+    );
+
+    // Create audit log
+    await pool.query(
+      `INSERT INTO audit_logs (institution_id, admin_id, action, entity_type, entity_id, new_values)
+       VALUES ($1, $2, 'generate_slug', 'institution', $3, $4)`,
+      [institutionId, req.admin.adminId, institutionId, JSON.stringify({ url_slug: finalSlug })]
+    );
+
+    console.log(`Generated URL slug for institution ${institutionId}: ${finalSlug}`);
+
+    res.json({
+      success: true,
+      slug: finalSlug,
+      message: 'URL slug generated successfully'
+    });
+
+  } catch (error) {
+    console.error('Generate slug error:', error);
+    res.status(500).json({ error: 'Failed to generate URL slug' });
+  }
+}
