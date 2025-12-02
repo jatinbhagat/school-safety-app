@@ -228,12 +228,12 @@ export async function postReport(req: Request, res: Response): Promise<void> {
       }
 
       // Check for email field
-      if (finalDynamicFields.contact_email && typeof finalDynamicFields.contact_email === 'string') {
+      if (finalDynamicFields?.contact_email && typeof finalDynamicFields.contact_email === 'string') {
         reporterEmail = encryptPII ? encryptPII(finalDynamicFields.contact_email) : finalDynamicFields.contact_email;
       }
 
       // Check for phone field
-      if (finalDynamicFields.contact_phone && typeof finalDynamicFields.contact_phone === 'string') {
+      if (finalDynamicFields?.contact_phone && typeof finalDynamicFields.contact_phone === 'string') {
         reporterPhone = encryptPII ? encryptPII(finalDynamicFields.contact_phone) : finalDynamicFields.contact_phone;
       }
 

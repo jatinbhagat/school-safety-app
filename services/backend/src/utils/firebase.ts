@@ -1,4 +1,10 @@
-import * as admin from 'firebase-admin';
+// Optional firebase import - graceful degradation if not available
+let admin: any;
+try {
+  admin = require('firebase-admin');
+} catch (error) {
+  console.log('Firebase admin not available - push notifications disabled');
+}
 
 /**
  * Firebase Cloud Messaging (FCM) Service
@@ -33,6 +39,13 @@ class FirebaseService {
    */
   private initialize() {
     try {
+      // Skip initialization if Firebase Admin SDK is not available
+      if (!admin) {
+        console.log('⚠️ Firebase admin not available - Push notifications will be disabled');
+        this.isConfigured = false;
+        return;
+      }
+
       // Check if Firebase credentials are configured
       const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
       const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -80,7 +93,7 @@ class FirebaseService {
     }
 
     try {
-      const message: admin.messaging.Message = {
+      const message: any = {
         token: options.token,
         notification: {
           title: options.title,
@@ -152,7 +165,7 @@ class FirebaseService {
     }
 
     try {
-      const message: admin.messaging.MulticastMessage = {
+      const message: any = {
         tokens,
         notification: {
           title,
@@ -181,7 +194,7 @@ class FirebaseService {
 
       // Track invalid tokens for cleanup
       const invalidTokens: string[] = [];
-      response.responses.forEach((resp: admin.messaging.SendResponse, idx: number) => {
+      response.responses.forEach((resp: any, idx: number) => {
         if (!resp.success && resp.error) {
           const errorCode = resp.error.code;
           if (errorCode === 'messaging/invalid-registration-token' ||
@@ -219,7 +232,7 @@ class FirebaseService {
     }
 
     try {
-      const message: admin.messaging.Message = {
+      const message: any = {
         topic,
         notification: {
           title,

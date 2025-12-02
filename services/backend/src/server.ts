@@ -14,7 +14,6 @@ import { generateMicroGuide } from './handlers/generateMicroGuide';
 import { getMicroGuides } from './handlers/getMicroGuides';
 import { updateMicroGuide } from './handlers/updateMicroGuide';
 import { getIncidentDetail } from './handlers/getIncidentDetail';
-import { updateIncidentStatus } from './handlers/updateIncidentStatus';
 import { resolveIncidentEnhanced } from './handlers/resolveIncidentEnhanced';
 import { addStaffNote } from './handlers/addStaffNote';
 import { resolveIncident } from './handlers/resolveIncident';
