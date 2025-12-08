@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
+import { adminPushNotificationService } from '../services/adminPushNotifications';
 
 /**
  * POST /incidents/:id/assign
@@ -43,6 +44,12 @@ export async function assignIncident(req: Request, res: Response) {
        RETURNING id, category as type, description, status, created_at, ai_meta`,
       [JSON.stringify(aiMeta), incidentId]
     );
+
+    // Send push notification to assigned admin (async, don't wait)
+    // TODO: Get actual admin ID from assignment logic
+    // adminPushNotificationService.notifyIncidentAssigned(incidentId, assignedAdminId).catch(err => {
+    //   console.error('Failed to send assignment notification:', err);
+    // });
 
     res.status(200).json({
       ...result.rows[0],

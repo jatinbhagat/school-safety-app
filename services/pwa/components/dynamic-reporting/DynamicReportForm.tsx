@@ -59,6 +59,8 @@ export default function DynamicReportForm({
   onSubmitSuccess,
   onCancel,
 }: DynamicReportFormProps) {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
   const [config, setConfig] = useState<TenantConfig | null>(null);
   const [catalog, setCatalog] = useState<Map<string, FieldDefinition>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function DynamicReportForm({
 
   const loadConfig = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tenant/${tenantId}/reporting-config`);
+      const response = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
       const data = await response.json();
       setConfig(data.config);
     } catch (error) {
@@ -87,7 +89,7 @@ export default function DynamicReportForm({
 
   const loadCatalog = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/reporting/fields/catalog');
+      const response = await fetch(`${API_BASE_URL}/api/reporting/fields/catalog`);
       const data = await response.json();
       const catalogMap = new Map<string, FieldDefinition>();
       data.fields.forEach((field: FieldDefinition) => {
@@ -160,7 +162,7 @@ export default function DynamicReportForm({
     setSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:3001/report', {
+      const response = await fetch(`${API_BASE_URL}/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

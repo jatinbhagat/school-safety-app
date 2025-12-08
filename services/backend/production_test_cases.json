@@ -1,0 +1,129 @@
+{
+  "production_api_url": "https://safelynotify.azurewebsites.net",
+  "test_cases": [
+    {
+      "name": "Production School Test",
+      "data": {
+        "institutionType": "school",
+        "institutionName": "Prod Test Elementary School",
+        "country": "US",
+        "state": "CA",
+        "city": "San Francisco",
+        "email": "admin@prodtestelem.edu",
+        "contactName": "Dr. Production Test",
+        "phone": "+14155559999",
+        "password": "SecurePass123!",
+        "urlSlug": "prod-test-elementary",
+        "features": {
+          "alerts": true,
+          "reports": true,
+          "notifications": true,
+          "analytics": false
+        },
+        "staffEmails": ["teacher@prodtestelem.edu"],
+        "acceptedTerms": true
+      },
+      "expected_access_type": "free",
+      "expected_type_id": 1
+    },
+    {
+      "name": "Production College Test",
+      "data": {
+        "institutionType": "college",
+        "institutionName": "Prod Test Community College",
+        "country": "US",
+        "state": "TX",
+        "city": "Houston",
+        "email": "admin@prodtestcc.edu",
+        "contactName": "Prof. Production Test",
+        "phone": "+17135559999",
+        "password": "SecurePass123!",
+        "urlSlug": "prod-test-cc",
+        "features": {
+          "alerts": true,
+          "reports": true,
+          "notifications": true,
+          "analytics": true
+        },
+        "staffEmails": ["professor@prodtestcc.edu"],
+        "acceptedTerms": true
+      },
+      "expected_access_type": "free",
+      "expected_type_id": 2
+    },
+    {
+      "name": "Production University Test",
+      "data": {
+        "institutionType": "university",
+        "institutionName": "Prod Test State University",
+        "country": "US",
+        "state": "NY",
+        "city": "New York",
+        "email": "admin@prodtestuni.edu",
+        "contactName": "Dr. University Test",
+        "phone": "+12125559999",
+        "password": "SecurePass123!",
+        "urlSlug": "prod-test-university",
+        "features": {
+          "alerts": true,
+          "reports": true,
+          "notifications": true,
+          "analytics": true
+        },
+        "staffEmails": [],
+        "acceptedTerms": true
+      },
+      "expected_access_type": "free",
+      "expected_type_id": 4
+    },
+    {
+      "name": "Production Corporate Test",
+      "data": {
+        "institutionType": "corporate",
+        "institutionName": "Prod Test Corp Industries",
+        "country": "US",
+        "state": "WA",
+        "city": "Seattle",
+        "email": "admin@prodtestcorp.com",
+        "contactName": "John Production",
+        "phone": "+12065559999",
+        "password": "SecurePass123!",
+        "urlSlug": "prod-test-corp",
+        "features": {
+          "alerts": true,
+          "reports": true,
+          "notifications": false,
+          "analytics": true
+        },
+        "staffEmails": ["hr@prodtestcorp.com", "security@prodtestcorp.com"],
+        "acceptedTerms": true
+      },
+      "expected_access_type": "demo_required",
+      "expected_type_id": 3
+    },
+    {
+      "name": "Production Unknown Type Test (NGO -> Corporate fallback)",
+      "data": {
+        "institutionType": "ngo",
+        "institutionName": "Prod Test NGO Foundation",
+        "country": "CA",
+        "city": "Vancouver",
+        "email": "admin@prodtestngo.org",
+        "contactName": "Maria Production",
+        "phone": "+16045559999",
+        "password": "SecurePass123!",
+        "urlSlug": "prod-test-ngo",
+        "features": {
+          "alerts": true,
+          "reports": true,
+          "notifications": true,
+          "analytics": false
+        },
+        "staffEmails": ["volunteer@prodtestngo.org"],
+        "acceptedTerms": true
+      },
+      "expected_access_type": "demo_required",
+      "expected_type_id": 3
+    }
+  ]
+}

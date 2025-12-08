@@ -85,7 +85,7 @@ export default function ReportingConfigEditor() {
     fetchUserInfo();
     loadConfig();
     loadCatalog();
-  }, [tenantId]);
+  }, [institutionId]);
 
   const fetchUserInfo = async () => {
     try {
@@ -153,10 +153,10 @@ export default function ReportingConfigEditor() {
   }, [config, originalConfig]);
 
   const loadConfig = async () => {
-    if (!tenantId) return;
+    if (!institutionId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`);
+      const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/config`);
       const data = await response.json();
       setConfig(data.config);
       setOriginalConfig(JSON.parse(JSON.stringify(data.config))); // Deep copy
@@ -207,7 +207,7 @@ export default function ReportingConfigEditor() {
   };
 
   const saveConfig = async () => {
-    if (!config || !tenantId) return;
+    if (!config || !institutionId) return;
 
     // Validate configuration
     const errors = validateConfig();
@@ -220,7 +220,7 @@ export default function ReportingConfigEditor() {
     setSaving(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/tenant/${tenantId}/reporting-config`, {
+      const response = await fetch(`${API_BASE_URL}/api/institutions/${institutionId}/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

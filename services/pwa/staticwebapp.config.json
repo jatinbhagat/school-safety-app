@@ -1,0 +1,14 @@
+{
+  "buildAndDeployment": {
+    "environmentVariables": {
+      "NEXT_PUBLIC_API_URL": "https://safelynotify.azurewebsites.net"
+    }
+  },
+  "routes": [
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ]
+}

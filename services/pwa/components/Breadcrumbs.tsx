@@ -28,7 +28,19 @@ export default function Breadcrumbs() {
       'micro-guides-demo': 'Micro Guides',
       'triage-demo': 'Triage',
       'heatmap-demo': 'Heatmap',
+      'incidents': 'Incidents',
     };
+
+    // Special handling for incidents routes
+    if (pathname.includes('/admin/incidents/')) {
+      // For individual incident pages, just show Dashboard > Incident Detail
+      const incidentId = pathname.split('/').pop();
+      breadcrumbs.push({
+        label: `Incident #${incidentId}`,
+        href: pathname, // Current page, will be rendered as non-link
+      });
+      return breadcrumbs;
+    }
 
     let currentPath = '';
     for (let i = 0; i < paths.length; i++) {

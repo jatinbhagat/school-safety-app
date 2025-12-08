@@ -11,14 +11,24 @@ import {
 } from 'react-native';
 import { getIncidents } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import SearchBar from '../components/SearchBar';
+import { NetworkStatusBar } from '../utils/networkUtils';
 
 export default function IncidentsList({ navigation }) {
   const { user } = useAuth();
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // all, open, in_progress, resolved, assigned
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pagination, setPagination] = useState({
+    offset: 0,
+    limit: 20,
+    total: 0,
+    hasMore: true
+  });
 
   // Add profile button to header
   useLayoutEffect(() => {
@@ -38,40 +48,87 @@ export default function IncidentsList({ navigation }) {
     });
   }, [navigation, user]);
 
-  const fetchIncidents = async (filter = activeFilter) => {
+  const fetchIncidents = async (filter = activeFilter, search = searchQuery, reset = false) => {
     try {
       setError(null);
+      
+      // If reset, start from beginning
+      const currentOffset = reset ? 0 : pagination.offset;
+      setLoadingMore(!reset);
 
       // Build filter object
-      const filters = {};
+      const filters = {
+        limit: pagination.limit,
+        offset: currentOffset,
+        sortBy: 'created_at',
+        sortOrder: 'desc'
+      };
+      
       if (filter === 'assigned') {
         filters.assignedToMe = true;
       } else if (filter !== 'all') {
         filters.status = filter;
       }
+      
+      if (search && search.trim()) {
+        filters.search = search.trim();
+      }
 
       const response = await getIncidents(filters);
-      setIncidents(response.incidents || response || []);
+      const newIncidents = response.incidents || response || [];
+      const total = response.total || newIncidents.length;
+      
+      if (reset) {
+        setIncidents(newIncidents);
+      } else {
+        setIncidents(prev => [...prev, ...newIncidents]);
+      }
+      
+      setPagination(prev => ({
+        ...prev,
+        offset: currentOffset + newIncidents.length,
+        total,
+        hasMore: (currentOffset + newIncidents.length) < total
+      }));
+      
     } catch (err) {
       setError(err.message);
       console.error('Failed to fetch incidents:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchIncidents();
+    setPagination(prev => ({ ...prev, offset: 0, hasMore: true }));
+    fetchIncidents(activeFilter, searchQuery, true);
   }, [activeFilter]);
+
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, offset: 0, hasMore: true }));
+    fetchIncidents(activeFilter, searchQuery, true);
+  }, [searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchIncidents();
+    setPagination(prev => ({ ...prev, offset: 0, hasMore: true }));
+    fetchIncidents(activeFilter, searchQuery, true);
+  };
+
+  const onLoadMore = () => {
+    if (!loadingMore && pagination.hasMore) {
+      fetchIncidents(activeFilter, searchQuery, false);
+    }
   };
 
   const handleFilterPress = (filter) => {
     setActiveFilter(filter);
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
   };
 
   const renderIncident = ({ item }) => (
@@ -132,12 +189,31 @@ export default function IncidentsList({ navigation }) {
     );
   }
 
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#007AFF" />
+        <Text style={styles.footerLoaderText}>Loading more...</Text>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <NetworkStatusBar />
+      {/* Search Bar */}
+      <SearchBar
+        placeholder="Search incidents..."
+        onSearch={handleSearch}
+        debounceDelay={500}
+        initialValue={searchQuery}
+      />
+
       {/* Filter Chips */}
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
@@ -187,6 +263,16 @@ export default function IncidentsList({ navigation }) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Results Summary */}
+      {!loading && (
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryText}>
+            {incidents.length} of {pagination.total} incidents
+            {searchQuery ? ` for "${searchQuery}"` : ''}
+          </Text>
+        </View>
+      )}
+
       {/* Incidents List */}
       <FlatList
         data={incidents}
@@ -195,10 +281,25 @@ export default function IncidentsList({ navigation }) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={renderFooter}
         ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={styles.emptyText}>No incidents found</Text>
-          </View>
+          !loading ? (
+            <View style={styles.centered}>
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'No incidents match your search' : 'No incidents found'}
+              </Text>
+              {searchQuery && (
+                <TouchableOpacity 
+                  style={styles.clearSearchButton} 
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text style={styles.clearSearchButtonText}>Clear Search</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
         }
       />
     </View>
@@ -347,5 +448,41 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#999',
+    textAlign: 'center',
+  },
+  clearSearchButton: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 6,
+  },
+  clearSearchButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  summaryText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  footerLoaderText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
   },
 });

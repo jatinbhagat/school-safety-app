@@ -358,7 +358,7 @@ export async function getCurrentUser(req: Request, res: Response) {
     }
 
     const result = await pool.query(
-      `SELECT a.id, a.name, a.email, a.role, a.phone,
+      `SELECT a.id, a.name, a.email, a.role, a.phone, a.created_at, a.last_login_at,
               i.id as institution_id, i.institution_name, i.url_slug,
               i.logo_url, i.brand_color
        FROM institution_admins a
@@ -379,6 +379,8 @@ export async function getCurrentUser(req: Request, res: Response) {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      created_at: user.created_at,
+      last_login_at: user.last_login_at,
       institution: {
         id: user.institution_id,
         name: user.institution_name,

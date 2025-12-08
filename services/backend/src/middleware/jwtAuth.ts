@@ -6,7 +6,7 @@ import { pool } from '../db';
 declare global {
   namespace Express {
     interface Request {
-      admin?: TokenPayload;
+      admin?: TokenPayload & { name?: string };
       institution?: any;
     }
   }
@@ -66,8 +66,11 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction) {
       });
     }
 
-    // Attach admin and institution to request
-    req.admin = payload;
+    // Attach admin and institution to request (with enriched admin data from database)
+    req.admin = {
+      ...payload,
+      name: admin.name, // Add admin name from database
+    };
     req.institution = {
       id: payload.institutionId,
       name: admin.institution_name,
