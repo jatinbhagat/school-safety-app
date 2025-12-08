@@ -9,11 +9,17 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { getNotificationPreferences, updateNotificationPreference } from '../api/client';
+import { 
+  getNotificationPreferences, 
+  updateNotificationPreference, 
+  sendTestNotification 
+} from '../api/client';
+import { NetworkStatusBar } from '../utils/networkUtils';
 
 export default function NotificationPreferencesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [preferences, setPreferences] = useState({
     incident_assigned: { enabled: true, channels: ['push'] },
     incident_status_changed: { enabled: true, channels: ['push'] },
@@ -106,6 +112,18 @@ export default function NotificationPreferencesScreen({ navigation }) {
     }
   };
 
+  const handleSendTestNotification = async () => {
+    setSendingTest(true);
+    try {
+      await sendTestNotification();
+      Alert.alert('Success', 'Test notification sent successfully!');
+    } catch (error) {
+      Alert.alert('Error', `Failed to send test notification: ${error.message}`);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -115,8 +133,10 @@ export default function NotificationPreferencesScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <NetworkStatusBar />
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
         <Text style={styles.headerTitle}>Notification Preferences</Text>
         <Text style={styles.headerSubtitle}>
           Choose which notifications you want to receive
@@ -143,12 +163,34 @@ export default function NotificationPreferencesScreen({ navigation }) {
         ))}
       </View>
 
+      {/* Test Notification Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Test Notifications</Text>
+        <View style={styles.testSection}>
+          <Text style={styles.testDescription}>
+            Send a test notification to verify your settings are working properly.
+          </Text>
+          <TouchableOpacity
+            style={[styles.testButton, sendingTest && styles.testButtonDisabled]}
+            onPress={handleSendTestNotification}
+            disabled={sendingTest}
+          >
+            {sendingTest ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.testButtonText}>📱 Send Test Notification</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          💡 Tip: You can test your notification settings by requesting a test notification from your profile screen.
+          💡 Tip: Critical safety alerts cannot be disabled and will always be delivered regardless of your preferences.
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -156,6 +198,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  scrollView: {
+    flex: 1,
   },
   centered: {
     flex: 1,
@@ -227,5 +272,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E40AF',
     lineHeight: 20,
+  },
+  testSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  testDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  testButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  testButtonDisabled: {
+    opacity: 0.6,
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

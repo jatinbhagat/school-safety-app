@@ -61,7 +61,15 @@ class FirebaseService {
       try {
         serviceAccount = JSON.parse(serviceAccountKey);
       } catch (error) {
-        console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Expected JSON string.');
+        // SECURITY: Never log the actual service account key content
+        console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Expected valid JSON string.');
+        this.isConfigured = false;
+        return;
+      }
+      
+      // Validate service account structure without logging sensitive data
+      if (!serviceAccount.type || !serviceAccount.project_id || !serviceAccount.private_key) {
+        console.error('❌ Invalid Firebase service account structure. Missing required fields.');
         this.isConfigured = false;
         return;
       }
@@ -78,7 +86,9 @@ class FirebaseService {
       this.initialized = true;
       this.isConfigured = true;
     } catch (error) {
-      console.error('❌ Failed to initialize Firebase Admin SDK:', error);
+      // SECURITY: Sanitize Firebase initialization errors to prevent credential leakage
+      const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Failed to initialize Firebase Admin SDK:', sanitizedError.replace(/private_key|client_email|client_id/gi, '[REDACTED]'));
       this.isConfigured = false;
     }
   }
@@ -128,7 +138,9 @@ class FirebaseService {
         messageId: response,
       };
     } catch (error: any) {
-      console.error('❌ Failed to send push notification:', error);
+      // SECURITY: Sanitize error messages to prevent credential/token leakage
+      const sanitizedError = error.message ? error.message.replace(/private_key|client_email|token|key/gi, '[REDACTED]') : 'Unknown error';
+      console.error('❌ Failed to send push notification:', sanitizedError);
 
       // Handle invalid token errors
       if (error.code === 'messaging/invalid-registration-token' ||
@@ -141,7 +153,7 @@ class FirebaseService {
 
       return {
         success: false,
-        error: error.message || 'Unknown error',
+        error: 'Push notification failed',
       };
     }
   }
@@ -212,7 +224,9 @@ class FirebaseService {
         invalidTokens,
       };
     } catch (error) {
-      console.error('❌ Failed to send multicast notification:', error);
+      // SECURITY: Sanitize multicast error messages
+      const sanitizedError = error instanceof Error ? error.message.replace(/private_key|client_email|token|key/gi, '[REDACTED]') : 'Unknown error';
+      console.error('❌ Failed to send multicast notification:', sanitizedError);
       return { successCount: 0, failureCount: tokens.length, invalidTokens: [] };
     }
   }

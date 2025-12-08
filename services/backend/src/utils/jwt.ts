@@ -1,6 +1,25 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+// Production-grade JWT secret validation
+function validateJWTSecret(): string {
+  const jwtSecret = process.env.JWT_SECRET;
+  const nodeEnv = process.env.NODE_ENV;
+  
+  // In production, JWT_SECRET is mandatory
+  if (nodeEnv === 'production' && (!jwtSecret || jwtSecret === 'dev-secret-change-in-production')) {
+    throw new Error('CRITICAL: JWT_SECRET environment variable is required in production and cannot use development default');
+  }
+  
+  // Development fallback (preserved for local development)
+  if (!jwtSecret && nodeEnv !== 'production') {
+    console.warn('WARNING: Using development JWT secret. Set JWT_SECRET environment variable for production.');
+    return 'dev-secret-change-in-production';
+  }
+  
+  return jwtSecret!;
+}
+
+const JWT_SECRET = validateJWTSecret();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface TokenPayload {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,19 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Image,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
+import { NetworkStatusBar } from '../utils/networkUtils';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const [profileImage, setProfileImage] = useState(user?.profile_image || null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -26,6 +34,116 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await logout();
+          },
+        },
+      ]
+    );
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to change your profile picture.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleImagePicker = () => {
+    setShowImagePicker(true);
+  };
+
+  const pickImageFromLibrary = async () => {
+    setShowImagePicker(false);
+    
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image from library');
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    setShowImagePicker(false);
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Sorry, we need camera permissions to take a profile picture.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take picture');
+    }
+  };
+
+  const uploadProfileImage = async (imageUri) => {
+    try {
+      setUploadingImage(true);
+
+      // Create FormData for image upload
+      const formData = new FormData();
+      formData.append('profile_image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'profile_image.jpg',
+      });
+
+      // TODO: Replace with actual upload endpoint
+      // const response = await fetch('/api/auth/profile-image', {
+      //   method: 'POST',
+      //   body: formData,
+      //   headers: {
+      //     'Content-Type': 'multipart/form-data',
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      // });
+
+      // For now, just set the local image
+      setProfileImage(imageUri);
+      Alert.alert('Success', 'Profile picture updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upload profile picture');
+      console.error('Profile image upload error:', error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeProfileImage = () => {
+    Alert.alert(
+      'Remove Profile Picture',
+      'Are you sure you want to remove your profile picture?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            setProfileImage(null);
+            // TODO: Send request to server to remove profile image
           },
         },
       ]
@@ -67,15 +185,40 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <NetworkStatusBar />
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
         {/* Profile Header */}
         <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.avatarContainer} 
+            onPress={handleImagePicker}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? (
+              <ActivityIndicator size="large" color="#007AFF" />
+            ) : profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.cameraIcon}>
+              <Text style={styles.cameraIconText}>📷</Text>
+            </View>
+          </TouchableOpacity>
+          {profileImage && (
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={removeProfileImage}
+            >
+              <Text style={styles.removeImageButtonText}>Remove Picture</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.name}>{user.name || 'Staff Member'}</Text>
           <Text style={styles.email}>{user.email}</Text>
           <View style={[styles.roleBadge, { backgroundColor: getRoleBadgeColor(user.role) }]}>
@@ -121,12 +264,18 @@ export default function ProfileScreen() {
 
         {/* Actions */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NotificationPreferences')}
+          >
             <Text style={styles.actionButtonText}>Notification Preferences</Text>
             <Text style={styles.actionButtonArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => Alert.alert('Change Password', 'Password change functionality coming soon!')}
+          >
             <Text style={styles.actionButtonText}>Change Password</Text>
             <Text style={styles.actionButtonArrow}>›</Text>
           </TouchableOpacity>
@@ -140,7 +289,45 @@ export default function ProfileScreen() {
         {/* App Version */}
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </View>
-    </ScrollView>
+
+      {/* Image Picker Modal */}
+      <Modal
+        visible={showImagePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowImagePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.imagePickerModal}>
+            <Text style={styles.imagePickerTitle}>Change Profile Picture</Text>
+            
+            <TouchableOpacity 
+              style={styles.imagePickerOption}
+              onPress={pickImageFromCamera}
+            >
+              <Text style={styles.imagePickerIcon}>📷</Text>
+              <Text style={styles.imagePickerText}>Take Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.imagePickerOption}
+              onPress={pickImageFromLibrary}
+            >
+              <Text style={styles.imagePickerIcon}>🖼️</Text>
+              <Text style={styles.imagePickerText}>Choose from Library</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.imagePickerOption, styles.cancelOption]}
+              onPress={() => setShowImagePicker(false)}
+            >
+              <Text style={styles.cancelOptionText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -148,6 +335,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -168,10 +358,50 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    position: 'relative',
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  cameraIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cameraIconText: {
+    fontSize: 12,
+  },
+  removeImageButton: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  removeImageButtonText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: '500',
   },
   avatarText: {
     fontSize: 32,
@@ -295,5 +525,56 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontSize: 16,
     marginTop: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  imagePickerModal: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 34,
+    paddingHorizontal: 20,
+  },
+  imagePickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#000',
+  },
+  imagePickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+  },
+  imagePickerIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  imagePickerText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000',
+  },
+  cancelOption: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginTop: 8,
+    justifyContent: 'center',
+  },
+  cancelOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+    textAlign: 'center',
   },
 });

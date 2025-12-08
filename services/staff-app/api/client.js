@@ -8,6 +8,11 @@ import { getAuthToken } from '../utils/secureStorage';
 // Get the API base URL from environment variables
 const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3001';
 
+// Standardized API endpoint paths
+const BASE_INCIDENTS_PATH = '/api/admin/incidents';
+const BASE_AUTH_PATH = '/api/auth';
+const BASE_ADMIN_PATH = '/api/admin';
+
 /**
  * Make an authenticated fetch request to the API
  * @param {string} endpoint - API endpoint (e.g., '/api/admin/incidents')
@@ -75,7 +80,7 @@ export const apiClient = async (endpoint, options = {}, requiresAuth = true) => 
  */
 export const login = (email, password) => {
   return apiClient(
-    '/api/auth/login',
+    `${BASE_AUTH_PATH}/login`,
     {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -89,7 +94,7 @@ export const login = (email, password) => {
  * @returns {Promise<object>}
  */
 export const getCurrentUser = () => {
-  return apiClient('/api/auth/me', { method: 'GET' });
+  return apiClient(`${BASE_AUTH_PATH}/me`, { method: 'GET' });
 };
 
 /**
@@ -98,7 +103,7 @@ export const getCurrentUser = () => {
  * @returns {Promise<object>}
  */
 export const updateProfile = (profileData) => {
-  return apiClient('/api/auth/profile', {
+  return apiClient(`${BASE_AUTH_PATH}/profile`, {
     method: 'PUT',
     body: JSON.stringify(profileData),
   });
@@ -110,8 +115,8 @@ export const updateProfile = (profileData) => {
 
 /**
  * Get all incidents for the current admin's institution
- * @param {object} filters - {status, category, search, limit, offset}
- * @returns {Promise<{incidents: array, total: number}>}
+ * @param {object} filters - {status, category, search, limit, offset, sortBy, sortOrder}
+ * @returns {Promise<{incidents: array, total: number, pagination: object}>}
  */
 export const getIncidents = (filters = {}) => {
   const params = new URLSearchParams();
@@ -122,9 +127,11 @@ export const getIncidents = (filters = {}) => {
   if (filters.assignedToMe) params.append('assignedToMe', 'true');
   if (filters.limit) params.append('limit', filters.limit);
   if (filters.offset) params.append('offset', filters.offset);
+  if (filters.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
   const queryString = params.toString();
-  const endpoint = queryString ? `/api/admin/incidents?${queryString}` : '/api/admin/incidents';
+  const endpoint = queryString ? `${BASE_INCIDENTS_PATH}?${queryString}` : BASE_INCIDENTS_PATH;
 
   return apiClient(endpoint, { method: 'GET' });
 };
@@ -135,7 +142,7 @@ export const getIncidents = (filters = {}) => {
  * @returns {Promise<object>}
  */
 export const getIncidentDetail = (incidentId) => {
-  return apiClient(`/api/admin/incidents/${incidentId}`, { method: 'GET' });
+  return apiClient(`${BASE_INCIDENTS_PATH}/${incidentId}`, { method: 'GET' });
 };
 
 /**
@@ -168,7 +175,7 @@ export const addIncidentNote = (incidentId, note) => {
  * @returns {Promise<object>}
  */
 export const updateIncidentStatus = (incidentId, status, notes = '') => {
-  return apiClient(`/api/admin/incidents/${incidentId}/status`, {
+  return apiClient(`${BASE_INCIDENTS_PATH}/${incidentId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status, notes }),
   });
@@ -182,7 +189,7 @@ export const updateIncidentStatus = (incidentId, status, notes = '') => {
  * @returns {Promise<object>}
  */
 export const flagAsFalse = (incidentId, reason, notes = '') => {
-  return apiClient(`/api/admin/incidents/${incidentId}/flag-false`, {
+  return apiClient(`${BASE_INCIDENTS_PATH}/${incidentId}/flag-false`, {
     method: 'POST',
     body: JSON.stringify({ reason, notes }),
   });
@@ -195,7 +202,7 @@ export const flagAsFalse = (incidentId, reason, notes = '') => {
  * @returns {Promise<object>}
  */
 export const confirmFalseReport = (incidentId, finalNotes = '') => {
-  return apiClient(`/api/admin/incidents/${incidentId}/confirm-false`, {
+  return apiClient(`${BASE_INCIDENTS_PATH}/${incidentId}/confirm-false`, {
     method: 'POST',
     body: JSON.stringify({ finalNotes }),
   });
@@ -208,7 +215,7 @@ export const confirmFalseReport = (incidentId, finalNotes = '') => {
  * @returns {Promise<object>}
  */
 export const restoreFalseReport = (incidentId, reason = '') => {
-  return apiClient(`/api/admin/incidents/${incidentId}/restore`, {
+  return apiClient(`${BASE_INCIDENTS_PATH}/${incidentId}/restore`, {
     method: 'POST',
     body: JSON.stringify({ reason }),
   });
@@ -220,7 +227,7 @@ export const restoreFalseReport = (incidentId, reason = '') => {
  * @returns {Promise<{incidents: array, reputation: object}>}
  */
 export const getReporterHistory = (fingerprint) => {
-  return apiClient(`/api/admin/reporter-history/${fingerprint}`, { method: 'GET' });
+  return apiClient(`${BASE_ADMIN_PATH}/reporter-history/${fingerprint}`, { method: 'GET' });
 };
 
 /**
@@ -230,7 +237,7 @@ export const getReporterHistory = (fingerprint) => {
  * @returns {Promise<object>}
  */
 export const blockReporter = (fingerprint, reason) => {
-  return apiClient(`/api/admin/block-reporter`, {
+  return apiClient(`${BASE_ADMIN_PATH}/block-reporter`, {
     method: 'POST',
     body: JSON.stringify({ fingerprint, reason }),
   });
@@ -248,7 +255,7 @@ export const blockReporter = (fingerprint, reason) => {
  * @returns {Promise<object>}
  */
 export const registerPushToken = (token, deviceType, deviceId = '') => {
-  return apiClient('/api/admin/push-token', {
+  return apiClient(`${BASE_ADMIN_PATH}/push-token`, {
     method: 'POST',
     body: JSON.stringify({ token, device_type: deviceType, device_id: deviceId }),
   });
@@ -260,7 +267,7 @@ export const registerPushToken = (token, deviceType, deviceId = '') => {
  * @returns {Promise<object>}
  */
 export const deactivatePushToken = (token) => {
-  return apiClient('/api/admin/push-token', {
+  return apiClient(`${BASE_ADMIN_PATH}/push-token`, {
     method: 'DELETE',
     body: JSON.stringify({ token }),
   });
@@ -271,7 +278,7 @@ export const deactivatePushToken = (token) => {
  * @returns {Promise<{preferences: array}>}
  */
 export const getNotificationPreferences = () => {
-  return apiClient('/api/admin/notification-preferences', { method: 'GET' });
+  return apiClient(`${BASE_ADMIN_PATH}/notification-preferences`, { method: 'GET' });
 };
 
 /**
@@ -282,7 +289,7 @@ export const getNotificationPreferences = () => {
  * @returns {Promise<object>}
  */
 export const updateNotificationPreference = (notificationType, enabled, channels) => {
-  return apiClient('/api/admin/notification-preferences', {
+  return apiClient(`${BASE_ADMIN_PATH}/notification-preferences`, {
     method: 'PUT',
     body: JSON.stringify({
       notification_type: notificationType,
@@ -297,7 +304,7 @@ export const updateNotificationPreference = (notificationType, enabled, channels
  * @returns {Promise<object>}
  */
 export const sendTestNotification = () => {
-  return apiClient('/api/admin/test-notification', {
+  return apiClient(`${BASE_ADMIN_PATH}/test-notification`, {
     method: 'POST',
   });
 };

@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/netinfo": "^11.0.0",
     "@react-navigation/native": "^6.1.7",
     "@react-navigation/native-stack": "^6.9.13",
     "expo": "~54.0.0",
     "expo-constants": "^18.0.10",
     "expo-device": "^8.0.9",
+    "expo-image-picker": "~15.0.0",
     "expo-notifications": "^0.32.13",
     "expo-status-bar": "~2.0.0",
     "react": "19.1.0",

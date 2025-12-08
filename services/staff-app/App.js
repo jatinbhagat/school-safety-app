@@ -8,6 +8,8 @@ import LoginScreen from './screens/LoginScreen';
 import IncidentsList from './screens/IncidentsList';
 import IncidentDetail from './screens/IncidentDetail';
 import ProfileScreen from './screens/ProfileScreen';
+import NotificationPreferencesScreen from './screens/NotificationPreferencesScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +67,13 @@ function AppNavigator() {
               title: 'Profile',
             }}
           />
+          <Stack.Screen
+            name="NotificationPreferences"
+            component={NotificationPreferencesScreen}
+            options={{
+              title: 'Notification Preferences',
+            }}
+          />
         </Stack.Navigator>
       )}
     </NavigationContainer>
@@ -73,10 +82,12 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <AppNavigator />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <AppNavigator />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -8,7 +8,7 @@ import { firebaseService } from '../utils/firebase';
  */
 export async function registerPushToken(req: Request, res: Response) {
   try {
-    const { token, device_type, device_id } = req.body;
+    const { token, device_type, device_name } = req.body;
     const adminId = req.admin?.adminId;
     const institutionId = req.admin?.institutionId;
 
@@ -38,14 +38,14 @@ export async function registerPushToken(req: Request, res: Response) {
         UPDATE push_notification_tokens
         SET
           device_type = $1,
-          device_id = $2,
+          device_name = $2,
           is_active = true,
           updated_at = NOW()
         WHERE id = $3
         RETURNING *
       `;
 
-      await pool.query(updateQuery, [device_type, device_id, existingResult.rows[0].id]);
+      await pool.query(updateQuery, [device_type, device_name, existingResult.rows[0].id]);
 
       return res.status(200).json({
         message: 'Push token updated successfully',
@@ -55,22 +55,20 @@ export async function registerPushToken(req: Request, res: Response) {
       const insertQuery = `
         INSERT INTO push_notification_tokens (
           admin_id,
-          institution_id,
           token,
           device_type,
-          device_id,
+          device_name,
           is_active
         )
-        VALUES ($1, $2, $3, $4, $5, true)
+        VALUES ($1, $2, $3, $4, true)
         RETURNING *
       `;
 
       await pool.query(insertQuery, [
         adminId,
-        institutionId,
         token,
         device_type,
-        device_id || null,
+        device_name || null,
       ]);
 
       return res.status(201).json({

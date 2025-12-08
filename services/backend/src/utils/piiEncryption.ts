@@ -25,11 +25,16 @@ const SALT_LENGTH = 64;
  */
 function getEncryptionKey(): Buffer {
   const keyEnv = process.env.PII_ENCRYPTION_KEY;
+  const nodeEnv = process.env.NODE_ENV;
+
+  // Production environment MUST have PII encryption key
+  if (nodeEnv === 'production' && !keyEnv) {
+    throw new Error('CRITICAL: PII_ENCRYPTION_KEY environment variable is required in production. PII data cannot be stored without encryption.');
+  }
 
   if (!keyEnv) {
-    // For development only - generate a consistent key
+    // Development fallback (preserved for local development)
     console.warn('⚠️  PII_ENCRYPTION_KEY not set. Using development key (NOT FOR PRODUCTION)');
-    // In real deployment, this should throw an error
     const devKey = 'dev-key-32-chars-for-aes-256!!'; // 32 bytes for AES-256
     return Buffer.from(devKey.padEnd(32, '!'));
   }

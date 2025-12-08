@@ -57,7 +57,14 @@ import {
   sendTestNotification,
 } from './handlers/pushNotifications';
 
+// Production-grade middleware
+import { errorHandler } from './middleware/errorHandler';
+import { validateConfigOrExit } from './utils/configValidation';
+
 dotenv.config({ path: '.env.local' });
+
+// Validate environment configuration at startup (fail-fast)
+validateConfigOrExit();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -351,6 +358,9 @@ app.use((req: Request, res: Response) => {
     message: `Route ${req.method} ${req.path} not found`,
   });
 });
+
+// Production-grade error handling middleware (must be last)
+app.use(errorHandler);
 
 // Initialize storage on startup
 initializeStorage().then(() => {

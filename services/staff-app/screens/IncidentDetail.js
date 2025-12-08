@@ -10,6 +10,7 @@ import {
   TextInput,
   Modal,
   RefreshControl,
+  SafeAreaView,
 } from 'react-native';
 import {
   getIncidentDetail,
@@ -18,6 +19,10 @@ import {
   updateIncidentStatus,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import TimelineModal from '../components/TimelineModal';
+import NotesModal from '../components/NotesModal';
+import ConfirmationDialog from '../components/ConfirmationDialog';
+import { NetworkStatusBar } from '../utils/networkUtils';
 
 export default function IncidentDetail({ route, navigation }) {
   const { incidentId } = route.params;
@@ -37,8 +42,20 @@ export default function IncidentDetail({ route, navigation }) {
   // Modals
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  
+  // Confirmation dialogs
+  const [confirmationDialog, setConfirmationDialog] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    confirmStyle: 'primary',
+    loading: false
+  });
 
   useEffect(() => {
     fetchIncidentDetail();
@@ -66,16 +83,27 @@ export default function IncidentDetail({ route, navigation }) {
     fetchIncidentDetail();
   };
 
-  const handleAssignToMe = async () => {
+  const handleAssignToMe = () => {
+    setConfirmationDialog({
+      visible: true,
+      title: 'Assign Incident',
+      message: `Are you sure you want to assign incident #${incidentId} to yourself? This will mark you as responsible for handling this case.`,
+      onConfirm: confirmAssignToMe,
+      confirmStyle: 'primary',
+      loading: false
+    });
+  };
+
+  const confirmAssignToMe = async () => {
     try {
-      setAssigning(true);
+      setConfirmationDialog(prev => ({ ...prev, loading: true }));
       await assignIncident(incidentId);
+      setConfirmationDialog({ visible: false, title: '', message: '', onConfirm: null, confirmStyle: 'primary', loading: false });
       Alert.alert('Success', 'Incident assigned to you');
       fetchIncidentDetail(); // Refresh data
     } catch (error) {
+      setConfirmationDialog(prev => ({ ...prev, loading: false }));
       Alert.alert('Error', error.message);
-    } finally {
-      setAssigning(false);
     }
   };
 
@@ -99,22 +127,42 @@ export default function IncidentDetail({ route, navigation }) {
     }
   };
 
-  const handleChangeStatus = async () => {
+  const handleChangeStatus = () => {
     if (!selectedStatus) {
       Alert.alert('Error', 'Please select a status');
       return;
     }
 
-    try {
-      setChangingStatus(true);
-      await updateIncidentStatus(incidentId, selectedStatus);
+    if (selectedStatus === incident.status) {
       setShowStatusModal(false);
+      return;
+    }
+
+    const isDestructive = selectedStatus === 'closed' || selectedStatus === 'resolved';
+    
+    setShowStatusModal(false);
+    setConfirmationDialog({
+      visible: true,
+      title: 'Change Status',
+      message: `Are you sure you want to change the status to "${selectedStatus.replace('_', ' ')}"?${
+        isDestructive ? ' This action may limit further modifications to the incident.' : ''
+      }`,
+      onConfirm: confirmChangeStatus,
+      confirmStyle: isDestructive ? 'destructive' : 'primary',
+      loading: false
+    });
+  };
+
+  const confirmChangeStatus = async () => {
+    try {
+      setConfirmationDialog(prev => ({ ...prev, loading: true }));
+      await updateIncidentStatus(incidentId, selectedStatus);
+      setConfirmationDialog({ visible: false, title: '', message: '', onConfirm: null, confirmStyle: 'primary', loading: false });
       Alert.alert('Success', 'Status updated successfully');
       fetchIncidentDetail(); // Refresh data
     } catch (error) {
+      setConfirmationDialog(prev => ({ ...prev, loading: false }));
       Alert.alert('Error', error.message);
-    } finally {
-      setChangingStatus(false);
     }
   };
 
@@ -179,11 +227,13 @@ export default function IncidentDetail({ route, navigation }) {
   const canTakeActions = incident.status !== 'closed';
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <NetworkStatusBar />
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.idText}>#{incident.id}</Text>
@@ -263,36 +313,72 @@ export default function IncidentDetail({ route, navigation }) {
         {/* Timeline */}
         {timeline.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Timeline ({timeline.length})</Text>
-            {timeline.slice(0, 5).map((event, index) => (
-              <View key={event.id} style={styles.timelineItem}>
+            <TouchableOpacity 
+              style={styles.sectionHeader}
+              onPress={() => setShowTimelineModal(true)}
+            >
+              <Text style={styles.sectionTitle}>Timeline ({timeline.length})</Text>
+              <Text style={styles.sectionAction}>View All ›</Text>
+            </TouchableOpacity>
+            {timeline.slice(0, 3).map((event, index) => (
+              <View key={event.id || index} style={styles.timelineItem}>
                 <View style={styles.timelineDot} />
                 <View style={styles.timelineContent}>
-                  <Text style={styles.timelineEvent}>{event.event_description}</Text>
+                  <Text style={styles.timelineEvent}>
+                    {event.event_description || event.title || event.description}
+                  </Text>
                   <Text style={styles.timelineActor}>
-                    {event.actor_name} • {event.actor_role}
+                    {event.actor_name || event.user?.name} • {event.actor_role || 'Staff'}
                   </Text>
                   <Text style={styles.timelineTime}>
-                    {new Date(event.created_at).toLocaleString()}
+                    {new Date(event.created_at || event.timestamp).toLocaleString()}
                   </Text>
                 </View>
               </View>
             ))}
+            {timeline.length > 3 && (
+              <TouchableOpacity 
+                style={styles.viewMoreButton}
+                onPress={() => setShowTimelineModal(true)}
+              >
+                <Text style={styles.viewMoreText}>
+                  View {timeline.length - 3} more events
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         {/* Notes */}
         {notes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes ({notes.length})</Text>
-            {notes.slice(0, 3).map((note) => (
+            <TouchableOpacity 
+              style={styles.sectionHeader}
+              onPress={() => setShowNotesModal(true)}
+            >
+              <Text style={styles.sectionTitle}>Notes ({notes.length})</Text>
+              <Text style={styles.sectionAction}>View All ›</Text>
+            </TouchableOpacity>
+            {notes.slice(0, 2).map((note) => (
               <View key={note.id} style={styles.noteCard}>
-                <Text style={styles.noteText}>{note.note_text}</Text>
+                <Text style={styles.noteText} numberOfLines={2}>
+                  {note.note_text || note.text || note.content}
+                </Text>
                 <Text style={styles.noteAuthor}>
-                  — {note.author_name} • {new Date(note.created_at).toLocaleString()}
+                  — {note.author_name || note.author?.name || 'Staff'} • {new Date(note.created_at).toLocaleString()}
                 </Text>
               </View>
             ))}
+            {notes.length > 2 && (
+              <TouchableOpacity 
+                style={styles.viewMoreButton}
+                onPress={() => setShowNotesModal(true)}
+              >
+                <Text style={styles.viewMoreText}>
+                  View {notes.length - 2} more notes
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -320,17 +406,12 @@ export default function IncidentDetail({ route, navigation }) {
 
             {incident.status !== 'in_progress' && (
               <TouchableOpacity
-                style={[styles.actionButton, styles.assignButton, assigning && styles.disabled]}
+                style={[styles.actionButton, styles.assignButton]}
                 onPress={handleAssignToMe}
-                disabled={assigning}
               >
-                {assigning ? (
-                  <ActivityIndicator color="#007AFF" />
-                ) : (
-                  <Text style={[styles.actionButtonText, styles.assignButtonText]}>
-                    👤 Assign to Me
-                  </Text>
-                )}
+                <Text style={[styles.actionButtonText, styles.assignButtonText]}>
+                  👤 Assign to Me
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -339,7 +420,7 @@ export default function IncidentDetail({ route, navigation }) {
 
       {/* Add Note Modal */}
       <Modal visible={showNoteModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <SafeAreaView style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Note</Text>
             <TextInput
@@ -374,12 +455,12 @@ export default function IncidentDetail({ route, navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Change Status Modal */}
       <Modal visible={showStatusModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <SafeAreaView style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Change Status</Text>
             <View style={styles.statusOptions}>
@@ -417,25 +498,42 @@ export default function IncidentDetail({ route, navigation }) {
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.submitButton,
-                  changingStatus && styles.disabled,
-                ]}
+                style={[styles.modalButton, styles.submitButton]}
                 onPress={handleChangeStatus}
-                disabled={changingStatus}
               >
-                {changingStatus ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Update Status</Text>
-                )}
+                <Text style={styles.submitButtonText}>Update Status</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
-    </ScrollView>
+
+      {/* Timeline Modal */}
+      <TimelineModal 
+        visible={showTimelineModal}
+        onClose={() => setShowTimelineModal(false)}
+        timeline={timeline}
+      />
+
+      {/* Notes Modal */}
+      <NotesModal 
+        visible={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        notes={notes}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        visible={confirmationDialog.visible}
+        title={confirmationDialog.title}
+        message={confirmationDialog.message}
+        onConfirm={confirmationDialog.onConfirm}
+        onCancel={() => setConfirmationDialog({ visible: false, title: '', message: '', onConfirm: null, confirmStyle: 'primary', loading: false })}
+        confirmStyle={confirmationDialog.confirmStyle}
+        loading={confirmationDialog.loading}
+      />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -443,6 +541,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   centered: {
     flex: 1,
@@ -515,6 +616,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
     color: '#000',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionAction: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  viewMoreButton: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  viewMoreText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   aiCard: {
     backgroundColor: '#F8F9FA',
